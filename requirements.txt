@@ -1,0 +1,4 @@
+PyQt6>=6.6
+fonttools>=4.50
+numpy>=1.26,<2
+bezier>=2023.7.28,<2024

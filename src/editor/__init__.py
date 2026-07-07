@@ -1,0 +1,2 @@
+"""Stroke editing domain model."""
+

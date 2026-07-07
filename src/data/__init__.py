@@ -1,0 +1,2 @@
+"""Persistent character data storage."""
+
