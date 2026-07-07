@@ -1,0 +1,75 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" fill="#EDF2F7"/>
+  <rect x="56" y="52" width="1168" height="616" rx="28" fill="#FFFFFF"/>
+  <rect x="56" y="52" width="1168" height="92" rx="28" fill="#101827"/>
+  <path d="M56 116H1224V144H56V116Z" fill="#101827"/>
+  <text x="96" y="105" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700" fill="#FFFFFF">Personal Handwriting Font Creator</text>
+  <text x="96" y="132" font-family="Inter, Arial, sans-serif" font-size="16" fill="#C8D3E2">Write, refine, preview, and export your own installable TTF font.</text>
+  <rect x="942" y="83" width="70" height="28" rx="6" fill="#1D9A8A"/>
+  <text x="958" y="103" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">A-Z</text>
+  <rect x="1030" y="90" width="134" height="8" rx="4" fill="#27344A"/>
+  <rect x="1030" y="90" width="82" height="8" rx="4" fill="#F2B84B"/>
+  <text x="1030" y="121" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#C8D3E2">64/90 saved</text>
+
+  <rect x="88" y="174" width="190" height="438" rx="10" fill="#F8FAFC" stroke="#D7DEE8"/>
+  <text x="112" y="210" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#1F2A3A">Character List</text>
+  <text x="112" y="246" font-family="Inter, Arial, sans-serif" font-size="13" fill="#697386">Uppercase</text>
+  <rect x="104" y="264" width="150" height="28" rx="6" fill="#DCEFEB"/>
+  <text x="116" y="284" font-family="JetBrains Mono, Menlo, monospace" font-size="14" font-weight="700" fill="#0C554F">DONE  A</text>
+  <text x="116" y="319" font-family="JetBrains Mono, Menlo, monospace" font-size="14" fill="#263448">DONE  B</text>
+  <text x="116" y="354" font-family="JetBrains Mono, Menlo, monospace" font-size="14" fill="#263448">DONE  C</text>
+  <text x="116" y="389" font-family="JetBrains Mono, Menlo, monospace" font-size="14" fill="#263448">TODO  D</text>
+  <text x="116" y="424" font-family="JetBrains Mono, Menlo, monospace" font-size="14" fill="#263448">TODO  E</text>
+  <text x="112" y="478" font-family="Inter, Arial, sans-serif" font-size="13" fill="#697386">Lowercase</text>
+  <text x="116" y="512" font-family="JetBrains Mono, Menlo, monospace" font-size="14" fill="#263448">TODO  a</text>
+  <text x="116" y="547" font-family="JetBrains Mono, Menlo, monospace" font-size="14" fill="#263448">TODO  b</text>
+
+  <text x="520" y="190" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700" fill="#101827">Please write: A</text>
+  <text x="520" y="218" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#697386">Draw inside the guide box. Save moves your work into the font project.</text>
+  <rect x="316" y="244" width="408" height="408" rx="12" fill="#FFFFFF" stroke="#BCC8D6" stroke-width="2"/>
+  <g stroke="#E6ECF3" stroke-width="1">
+    <path d="M367 244V652"/>
+    <path d="M418 244V652"/>
+    <path d="M469 244V652"/>
+    <path d="M520 244V652"/>
+    <path d="M571 244V652"/>
+    <path d="M622 244V652"/>
+    <path d="M673 244V652"/>
+    <path d="M316 295H724"/>
+    <path d="M316 346H724"/>
+    <path d="M316 397H724"/>
+    <path d="M316 448H724"/>
+    <path d="M316 499H724"/>
+    <path d="M316 550H724"/>
+    <path d="M316 601H724"/>
+  </g>
+  <path d="M316 539H724" stroke="#1D9A8A" stroke-width="3" stroke-dasharray="8 8"/>
+  <path d="M316 420H724" stroke="#F2B84B" stroke-width="2" stroke-dasharray="8 8"/>
+  <text x="520" y="548" text-anchor="middle" font-family="Georgia, serif" font-size="330" font-weight="700" fill="#101827" opacity="0.08">A</text>
+  <path d="M420 572 C455 456,485 332,522 262 C564 348,604 460,644 574" stroke="#111827" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M466 457 C516 446,560 448,602 459" stroke="#111827" stroke-width="11" stroke-linecap="round"/>
+
+  <rect x="768" y="174" width="396" height="438" rx="10" fill="#F8FAFC" stroke="#D7DEE8"/>
+  <text x="792" y="210" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#1F2A3A">Draw</text>
+  <rect x="792" y="232" width="94" height="34" rx="7" fill="#1D9A8A"/>
+  <text x="824" y="254" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">Pen</text>
+  <rect x="898" y="232" width="94" height="34" rx="7" fill="#FFFFFF" stroke="#CDD6E3"/>
+  <text x="920" y="254" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#1D2736">Eraser</text>
+  <rect x="1004" y="232" width="94" height="34" rx="7" fill="#FFFFFF" stroke="#CDD6E3"/>
+  <text x="1032" y="254" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#1D2736">Move</text>
+
+  <text x="792" y="306" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#1F2A3A">Preview</text>
+  <rect x="792" y="324" width="332" height="76" rx="9" fill="#FFFFFF" stroke="#D7DEE8"/>
+  <path d="M816 375 C834 338,861 338,879 374 M827 360 C846 359,861 359,879 361" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+  <path d="M900 342 C898 358,898 372,900 386 M900 365 C912 352,929 354,928 384" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+  <path d="M950 342 C948 359,949 373,951 386 M952 364 C966 352,983 354,983 384" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+  <path d="M1008 342 C1005 358,1006 373,1009 386 M1010 366 C1022 350,1040 354,1040 383" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+
+  <text x="792" y="444" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#1F2A3A">Export</text>
+  <rect x="792" y="464" width="332" height="38" rx="7" fill="#FFFFFF" stroke="#CDD6E3"/>
+  <text x="812" y="488" font-family="Inter, Arial, sans-serif" font-size="15" fill="#16202E">MyHandwriting</text>
+  <rect x="792" y="520" width="332" height="42" rx="7" fill="#253149"/>
+  <text x="908" y="547" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">Generate Font</text>
+  <text x="792" y="592" font-family="Inter, Arial, sans-serif" font-size="13" fill="#697386">Output: output/MyHandwriting.ttf</text>
+</svg>
+

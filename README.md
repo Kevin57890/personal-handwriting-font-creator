@@ -1,24 +1,34 @@
 # Personal Handwriting Font Creator
 
-A polished desktop app for drawing letters, numbers, and punctuation directly on a canvas, saving the handwriting as vector stroke JSON, previewing the handwritten result, and generating a real installable TrueType font.
+![Personal Handwriting Font Creator interface](docs/assets/readme-hero.svg)
 
-## Features
+Create a real installable TrueType font from handwriting drawn directly inside a desktop editor. The app stores every character as vector strokes, previews your handwritten text, and exports a `.ttf` file you can install and use in Microsoft Word, Pages, Keynote, Photoshop, or any app that supports system fonts.
 
-- PyQt6 handwriting canvas with mouse and tablet-event support.
-- Vector stroke storage in `characters/*.json`.
-- Focused in-app editor with pen, eraser, move, undo, redo, center, scale, and nudge tools.
-- Progress-first workflow for uppercase, lowercase, numbers, and symbols.
-- Live preview rendered from saved vector strokes.
-- Export controls for font name, output folder, opening the generated font, opening the output folder, and copying the font path.
-- TrueType generation with `fontTools`.
-- Stroke-to-outline pipeline: simplify points, fit Catmull-Rom/Bezier curves, flatten curves, expand strokes into filled glyph outlines, write glyf/cmap tables.
+## Highlights
 
-## Requirements
+- Direct handwriting canvas for uppercase letters, lowercase letters, numbers, and punctuation.
+- Vector stroke storage in `characters/*.json`, including point order, timestamp, and pressure.
+- Built-in editing tools: pen, eraser, move, undo, redo, center, scale, nudge, clear, save, and save-next.
+- Live handwriting preview from saved strokes.
+- One-click font export with custom family name and output folder.
+- Convenient export actions: open generated font, open output folder, and copy font path.
+- TrueType generation with `fontTools`: glyph outlines, Unicode cmap, metrics, names, and font tables.
 
-- Python 3.9 or newer. Python 3.11 is recommended.
-- macOS, Windows, or Linux with a desktop session
+## How It Works
 
-## One-click Run on macOS
+![Generation flow](docs/assets/generation-flow.svg)
+
+The font pipeline is fully local:
+
+1. Draw a character in the canvas.
+2. Save vector strokes as JSON.
+3. Fit and sample smooth Bezier-like paths.
+4. Expand strokes into filled glyph outlines.
+5. Build a TrueType font with Unicode mappings.
+
+## Quick Start
+
+### macOS One-Click Launcher
 
 Double-click:
 
@@ -26,41 +36,64 @@ Double-click:
 Run Personal Handwriting Font Creator.command
 ```
 
-The launcher creates `.venv`, installs dependencies, verifies imports, and starts the editor.
+The launcher creates a virtual environment, installs dependencies, verifies imports, and starts the editor.
 
-## Install
+### Manual Run
 
 ```bash
-cd PersonalHandwritingFontCreator
+git clone https://github.com/Kevin57890/personal-handwriting-font-creator.git
+cd personal-handwriting-font-creator
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-```
-
-## Run
-
-```bash
-cd PersonalHandwritingFontCreator
-source .venv/bin/activate
 python main.py
 ```
 
-The first launch opens the Character Setup Wizard. Draw characters on the canvas, save each one, then press **Generate Font**. By default, the generated font is written to:
+Python 3.9 or newer is supported. Python 3.11 is recommended.
 
-```text
-output/<FontName>.ttf
-```
+## Exporting A Font
 
-Install that file in your operating system, then choose **MyHandwriting** in Microsoft Word and type text such as:
+1. Draw and save the characters you want.
+2. Enter a font family name, for example `MyHandwriting`.
+3. Choose an output folder or keep the default `output/`.
+4. Click **Generate Font**.
+5. Install the generated `.ttf` file.
+
+After installation, select the font in Microsoft Word and type:
 
 ```text
 Hello World!
 ```
 
-## Stroke JSON Format
+The text will render using your handwritten glyphs for every saved character.
 
-Each character is saved as JSON:
+## Project Structure
+
+```text
+PersonalHandwritingFontCreator/
+  main.py
+  requirements.txt
+  src/
+    gui/
+      main_window.py
+      canvas.py
+      styles.py
+    editor/
+      stroke_manager.py
+    font/
+      glyph_generator.py
+      ttf_builder.py
+    data/
+      character_storage.py
+    utils/
+      characters.py
+  characters/
+  output/
+  tests/
+```
+
+## Stroke JSON Format
 
 ```json
 {
@@ -75,11 +108,17 @@ Each character is saved as JSON:
 }
 ```
 
-Coordinates are canvas-space points. Pressure defaults to `1.0` for mouse input and uses tablet pressure when available.
+Each point is:
+
+```text
+[x, y, time, pressure]
+```
+
+Mouse input uses pressure `1.0`. Tablet input uses available device pressure.
 
 ## Tests
 
 ```bash
-cd PersonalHandwritingFontCreator
 python -m unittest discover -s tests
 ```
+
