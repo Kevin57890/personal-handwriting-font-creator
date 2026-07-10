@@ -7,7 +7,9 @@ import unittest
 from fontTools.ttLib import TTFont
 
 from src.data.character_storage import CharacterStorage
+from src.data.project_package import ProjectPackage
 from src.font.glyph_generator import GlyphGenerator
+from src.font.sample_exporter import FontSampleExporter
 from src.font.ttf_builder import TTFBuilder
 
 
@@ -65,7 +67,44 @@ class StorageAndFontTests(unittest.TestCase):
             self.assertIn("glyf", font)
             self.assertIn("hmtx", font)
 
+    def test_project_package_exports_restores_and_reports(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            storage = CharacterStorage(root / "characters")
+            storage.save_character("A", [[[10, 20, 1.0, 1.0], [30, 40, 1.1, 1.0]]])
+
+            package = ProjectPackage(storage)
+            zip_path = package.export_zip(root / "backup.zip", "UnitTestHand")
+            self.assertTrue(zip_path.exists())
+
+            report_path = package.write_missing_report(root / "missing.txt")
+            report = report_path.read_text(encoding="utf-8")
+            self.assertIn("Saved: 1/", report)
+            self.assertIn("Missing characters:", report)
+
+            restored_storage = CharacterStorage(root / "restored")
+            restored = ProjectPackage(restored_storage).import_zip(zip_path)
+            self.assertEqual(restored, 1)
+            self.assertTrue(restored_storage.has_character("A"))
+
+    def test_sample_exporter_writes_html_preview(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            font_path = root / "UnitTestHand.ttf"
+            font_path.write_bytes(b"fake-font-for-html-reference")
+            sample = FontSampleExporter().export_html(
+                output_path=root / "sample.html",
+                font_path=font_path,
+                family_name="UnitTestHand",
+                sample_text="Hello World!",
+                saved_count=12,
+                total_count=90,
+            )
+            html = sample.read_text(encoding="utf-8")
+            self.assertIn("@font-face", html)
+            self.assertIn("UnitTestHand", html)
+            self.assertIn("Hello World!", html)
+
 
 if __name__ == "__main__":
     unittest.main()
-

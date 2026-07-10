@@ -7,11 +7,13 @@ Create a real installable TrueType font from handwriting drawn directly inside a
 ## Highlights
 
 - Direct handwriting canvas for uppercase letters, lowercase letters, numbers, and punctuation.
-- Vector stroke storage in `characters/*.json`, including point order, timestamp, and pressure.
+- Vector stroke storage in Unicode-safe `characters/*.json`, including point order, timestamp, and pressure.
 - Built-in editing tools: pen, eraser, move, undo, redo, center, scale, nudge, clear, save, and save-next.
 - Live handwriting preview from saved strokes.
-- One-click font export with custom family name and output folder.
-- Convenient export actions: open generated font, open output folder, and copy font path.
+- One-click font export with custom family name, output folder, and automatic HTML sample page.
+- Convenient export actions: open generated font, install font, open output folder, and copy font path.
+- Project backup and restore as portable `.zip` archives.
+- Missing character report for finishing a usable font faster.
 - TrueType generation with `fontTools`: glyph outlines, Unicode cmap, metrics, names, and font tables.
 
 ## How It Works
@@ -25,6 +27,7 @@ The font pipeline is fully local:
 3. Fit and sample smooth Bezier-like paths.
 4. Expand strokes into filled glyph outlines.
 5. Build a TrueType font with Unicode mappings.
+6. Export a browser sample page and optional project backup.
 
 ## Quick Start
 
@@ -58,7 +61,7 @@ Python 3.9 or newer is supported. Python 3.11 is recommended.
 2. Enter a font family name, for example `MyHandwriting`.
 3. Choose an output folder or keep the default `output/`.
 4. Click **Generate Font**.
-5. Install the generated `.ttf` file.
+5. Use **Install Font**, **Open Font**, or **Open Output** from the export panel.
 
 After installation, select the font in Microsoft Word and type:
 
@@ -67,6 +70,22 @@ Hello World!
 ```
 
 The text will render using your handwritten glyphs for every saved character.
+
+Every font export also creates:
+
+```text
+output/<FontName>-sample.html
+```
+
+Open the sample page in a browser to review your generated font, glyph coverage, and preview text before installing it everywhere.
+
+## Project Management
+
+- **Backup Project** writes a portable `.zip` archive containing saved character JSON and a manifest.
+- **Restore Project** imports a backup and refreshes the editor.
+- **Missing Report** writes a plain-text checklist of saved and missing characters.
+- Character files use Unicode-based names, so uppercase and lowercase glyphs remain separate on case-insensitive file systems.
+- Character JSON remains local by default and is ignored by git.
 
 ## Project Structure
 
@@ -86,6 +105,7 @@ PersonalHandwritingFontCreator/
       ttf_builder.py
     data/
       character_storage.py
+      project_package.py
     utils/
       characters.py
   characters/
@@ -108,6 +128,13 @@ PersonalHandwritingFontCreator/
 }
 ```
 
+Saved files use names such as:
+
+```text
+U+0041_LATIN_CAPITAL_LETTER_A.json
+U+0061_LATIN_SMALL_LETTER_A.json
+```
+
 Each point is:
 
 ```text
@@ -121,4 +148,3 @@ Mouse input uses pressure `1.0`. Tablet input uses available device pressure.
 ```bash
 python -m unittest discover -s tests
 ```
-

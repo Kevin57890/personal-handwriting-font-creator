@@ -32,8 +32,9 @@
 
     <path d="M1048 124H1108" stroke="#1D9A8A" stroke-width="3" stroke-linecap="round"/>
     <path d="M1098 114L1110 124L1098 134" stroke="#1D9A8A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="1130" y="118" text-anchor="middle" font-size="15" font-weight="700" fill="#101827">Word</text>
-    <text x="1130" y="142" text-anchor="middle" font-size="13" fill="#697386">Hello!</text>
+    <text x="1130" y="108" text-anchor="middle" font-size="15" font-weight="700" fill="#101827">Use</text>
+    <text x="1130" y="132" text-anchor="middle" font-size="13" fill="#697386">Word</text>
+    <text x="1130" y="154" text-anchor="middle" font-size="13" fill="#697386">Sample HTML</text>
+    <text x="590" y="226" text-anchor="middle" font-size="13" fill="#617084">Optional project backup keeps the editable JSON strokes portable.</text>
   </g>
 </svg>
-

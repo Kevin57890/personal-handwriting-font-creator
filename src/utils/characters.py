@@ -33,12 +33,15 @@ def glyph_name_for_character(character: str) -> str:
 
 
 def safe_filename_for_character(character: str) -> str:
-    if character.isalnum() and character.isascii():
-        return f"{character}.json"
-
     name = unicodedata.name(character, "SYMBOL")
     safe_name = "".join(ch if ch.isalnum() else "_" for ch in name).strip("_")
     return f"U+{unicode_hex(character)}_{safe_name}.json"
+
+
+def legacy_filename_for_character(character: str) -> str | None:
+    if character.isalnum() and character.isascii():
+        return f"{character}.json"
+    return None
 
 
 def group_name_for_character(character: str) -> str:
@@ -46,4 +49,3 @@ def group_name_for_character(character: str) -> str:
         if character in group:
             return group_name
     return "Custom"
-

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+import shutil
+import sys
 
 from PyQt6.QtCore import QPointF, QRectF, QTimer, Qt, QUrl
 from PyQt6.QtGui import QColor, QDesktopServices, QFont, QPainter, QPen
@@ -32,6 +34,8 @@ from PyQt6.QtWidgets import (
 )
 
 from src.data.character_storage import CharacterStorage
+from src.data.project_package import ProjectPackage
+from src.font.sample_exporter import FontSampleExporter
 from src.font.ttf_builder import TTFBuilder
 from src.gui.canvas import HandwritingCanvas
 from src.gui.styles import APP_STYLESHEET
@@ -201,6 +205,7 @@ class MainWindow(QMainWindow):
         self._loading_character = False
         self._dirty = False
         self.last_generated_font: Path | None = None
+        self.last_sample_path: Path | None = None
 
         self.setWindowTitle("Personal Handwriting Font Creator")
         self.setStyleSheet(APP_STYLESHEET)
@@ -451,6 +456,11 @@ class MainWindow(QMainWindow):
         self.open_output_button = QPushButton("Open Output")
         self.copy_path_button = QPushButton("Copy Font Path")
         self.open_font_button = QPushButton("Open Font")
+        self.install_font_button = QPushButton("Install Font")
+        self.sample_page_button = QPushButton("Sample Page")
+        self.backup_project_button = QPushButton("Backup Project")
+        self.restore_project_button = QPushButton("Restore Project")
+        self.missing_report_button = QPushButton("Missing Report")
 
         self.clear_button.clicked.connect(self.canvas.clear)
         self.undo_button.clicked.connect(self.canvas.undo)
@@ -471,6 +481,11 @@ class MainWindow(QMainWindow):
         self.open_output_button.clicked.connect(self._open_output_dir)
         self.copy_path_button.clicked.connect(self._copy_last_font_path)
         self.open_font_button.clicked.connect(self._open_last_font)
+        self.install_font_button.clicked.connect(self._install_last_font)
+        self.sample_page_button.clicked.connect(self._export_sample_page)
+        self.backup_project_button.clicked.connect(self._backup_project)
+        self.restore_project_button.clicked.connect(self._restore_project)
+        self.missing_report_button.clicked.connect(self._write_missing_report)
 
         refine_layout.addWidget(self.clear_button, 0, 0)
         refine_layout.addWidget(self.undo_button, 0, 1)
@@ -494,6 +509,12 @@ class MainWindow(QMainWindow):
         preview_layout.addWidget(self.preview_input)
         preview_layout.addWidget(self.preview_widget)
 
+        project_box = QGroupBox("Project")
+        project_layout = QGridLayout(project_box)
+        project_layout.addWidget(self.backup_project_button, 0, 0)
+        project_layout.addWidget(self.restore_project_button, 0, 1)
+        project_layout.addWidget(self.missing_report_button, 1, 0, 1, 2)
+
         export_box = QGroupBox("Export")
         export_layout = QGridLayout(export_box)
         export_layout.addWidget(QLabel("Font name"), 0, 0)
@@ -504,7 +525,9 @@ class MainWindow(QMainWindow):
         export_layout.addWidget(self.generate_button, 2, 0, 1, 3)
         export_layout.addWidget(self.open_output_button, 3, 0)
         export_layout.addWidget(self.open_font_button, 3, 1)
-        export_layout.addWidget(self.copy_path_button, 3, 2)
+        export_layout.addWidget(self.install_font_button, 3, 2)
+        export_layout.addWidget(self.sample_page_button, 4, 0)
+        export_layout.addWidget(self.copy_path_button, 4, 1, 1, 2)
 
         stats_box = QGroupBox("Progress")
         stats_layout = QVBoxLayout(stats_box)
@@ -515,6 +538,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(draw_box)
         layout.addWidget(refine_box)
         layout.addWidget(preview_box)
+        layout.addWidget(project_box)
         layout.addWidget(export_box)
         layout.addWidget(stats_box)
         layout.addStretch(1)
@@ -650,13 +674,73 @@ class MainWindow(QMainWindow):
         builder = TTFBuilder(storage=self.storage, family_name=family_name)
         written_path = builder.build(output_path=output_path)
         self.last_generated_font = written_path
+        self._export_sample_page(show_message=False)
         QApplication.clipboard().setText(str(written_path))
         QMessageBox.information(
             self,
             "Font Generated",
-            f"Generated font:\n{written_path}\n\nThe path was copied to the clipboard.",
+            f"Generated font:\n{written_path}\n\nA sample page was also created.\nThe font path was copied to the clipboard.",
         )
         self.statusBar().showMessage(f"Generated {written_path}", 5000)
+
+    def _backup_project(self) -> None:
+        self._save_current_character()
+        family_name = self.font_family_input.text().strip() or "MyHandwriting"
+        default_path = self.output_dir / f"{self._safe_font_filename(family_name)}-project.zip"
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Backup Project",
+            str(default_path),
+            "Handwriting Project (*.zip)",
+        )
+        if not path:
+            return
+        written = ProjectPackage(self.storage).export_zip(Path(path), family_name)
+        QApplication.clipboard().setText(str(written))
+        self.statusBar().showMessage(f"Project backup saved: {written}", 5000)
+
+    def _restore_project(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Restore Project",
+            str(self.output_dir),
+            "Handwriting Project (*.zip)",
+        )
+        if not path:
+            return
+        restored = ProjectPackage(self.storage).import_zip(Path(path))
+        self._refresh_preview()
+        self._refresh_character_list_labels()
+        self._load_current_character()
+        self.statusBar().showMessage(f"Restored {restored} characters.", 5000)
+        QMessageBox.information(self, "Project Restored", f"Restored {restored} character files.")
+
+    def _write_missing_report(self) -> None:
+        self._save_current_character()
+        family_name = self.font_family_input.text().strip() or "MyHandwriting"
+        default_path = self.output_dir / f"{self._safe_font_filename(family_name)}-missing.txt"
+        report = ProjectPackage(self.storage).write_missing_report(default_path)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(report)))
+        self.statusBar().showMessage(f"Missing report written: {report}", 5000)
+
+    def _export_sample_page(self, show_message: bool = True) -> None:
+        if self.last_generated_font is None or not self.last_generated_font.exists():
+            if show_message:
+                self.statusBar().showMessage("Generate a font first.", 2400)
+            return
+        family_name = self.font_family_input.text().strip() or "MyHandwriting"
+        sample_path = self.last_generated_font.with_name(f"{self.last_generated_font.stem}-sample.html")
+        self.last_sample_path = FontSampleExporter().export_html(
+            output_path=sample_path,
+            font_path=self.last_generated_font,
+            family_name=family_name,
+            sample_text=self.preview_input.text(),
+            saved_count=self.storage.saved_count(),
+            total_count=len(DEFAULT_CHARACTER_SEQUENCE),
+        )
+        if show_message:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.last_sample_path)))
+            self.statusBar().showMessage(f"Sample page opened: {self.last_sample_path}", 5000)
 
     def _choose_output_dir(self) -> None:
         chosen = QFileDialog.getExistingDirectory(
@@ -686,6 +770,32 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Generate a font first.", 2400)
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.last_generated_font)))
+
+    def _install_last_font(self) -> None:
+        if self.last_generated_font is None or not self.last_generated_font.exists():
+            self.statusBar().showMessage("Generate a font first.", 2400)
+            return
+
+        if sys.platform == "darwin":
+            fonts_dir = Path.home() / "Library" / "Fonts"
+            fonts_dir.mkdir(parents=True, exist_ok=True)
+            target = fonts_dir / self.last_generated_font.name
+            shutil.copy2(self.last_generated_font, target)
+            QMessageBox.information(self, "Font Installed", f"Installed font to:\n{target}")
+            self.statusBar().showMessage(f"Installed font: {target}", 5000)
+            return
+
+        if sys.platform.startswith("win"):
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.last_generated_font)))
+            self.statusBar().showMessage("Opened font file. Use the Install button in the font viewer.", 5000)
+            return
+
+        fonts_dir = Path.home() / ".local" / "share" / "fonts"
+        fonts_dir.mkdir(parents=True, exist_ok=True)
+        target = fonts_dir / self.last_generated_font.name
+        shutil.copy2(self.last_generated_font, target)
+        QMessageBox.information(self, "Font Installed", f"Installed font to:\n{target}")
+        self.statusBar().showMessage(f"Installed font: {target}", 5000)
 
     def _safe_font_filename(self, family_name: str) -> str:
         cleaned = re.sub(r"[^A-Za-z0-9_-]+", "", family_name.replace(" ", ""))

@@ -65,11 +65,21 @@
   <path d="M950 342 C948 359,949 373,951 386 M952 364 C966 352,983 354,983 384" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
   <path d="M1008 342 C1005 358,1006 373,1009 386 M1010 366 C1022 350,1040 354,1040 383" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
 
-  <text x="792" y="444" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#1F2A3A">Export</text>
-  <rect x="792" y="464" width="332" height="38" rx="7" fill="#FFFFFF" stroke="#CDD6E3"/>
-  <text x="812" y="488" font-family="Inter, Arial, sans-serif" font-size="15" fill="#16202E">MyHandwriting</text>
-  <rect x="792" y="520" width="332" height="42" rx="7" fill="#253149"/>
-  <text x="908" y="547" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">Generate Font</text>
-  <text x="792" y="592" font-family="Inter, Arial, sans-serif" font-size="13" fill="#697386">Output: output/MyHandwriting.ttf</text>
-</svg>
+  <text x="792" y="432" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#1F2A3A">Project</text>
+  <rect x="792" y="448" width="102" height="30" rx="7" fill="#FFFFFF" stroke="#CDD6E3"/>
+  <text x="820" y="468" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#1D2736">Backup</text>
+  <rect x="906" y="448" width="102" height="30" rx="7" fill="#FFFFFF" stroke="#CDD6E3"/>
+  <text x="932" y="468" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#1D2736">Restore</text>
+  <rect x="1020" y="448" width="104" height="30" rx="7" fill="#FFFFFF" stroke="#CDD6E3"/>
+  <text x="1045" y="468" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#1D2736">Missing</text>
 
+  <text x="792" y="510" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#1F2A3A">Export</text>
+  <rect x="792" y="526" width="332" height="34" rx="7" fill="#FFFFFF" stroke="#CDD6E3"/>
+  <text x="812" y="548" font-family="Inter, Arial, sans-serif" font-size="14" fill="#16202E">MyHandwriting</text>
+  <rect x="792" y="574" width="160" height="38" rx="7" fill="#253149"/>
+  <text x="826" y="599" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">Generate Font</text>
+  <rect x="964" y="574" width="76" height="38" rx="7" fill="#1D9A8A"/>
+  <text x="983" y="599" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF">Install</text>
+  <rect x="1050" y="574" width="74" height="38" rx="7" fill="#F2B84B"/>
+  <text x="1067" y="599" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#101827">Sample</text>
+</svg>

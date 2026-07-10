@@ -6,6 +6,7 @@ from typing import Any
 
 from src.utils.characters import (
     DEFAULT_CHARACTER_SEQUENCE,
+    legacy_filename_for_character,
     safe_filename_for_character,
     unicode_hex,
 )
@@ -19,6 +20,21 @@ class CharacterStorage:
     def path_for_character(self, character: str) -> Path:
         return self.characters_dir / safe_filename_for_character(character)
 
+    def legacy_path_for_character(self, character: str) -> Path | None:
+        legacy_name = legacy_filename_for_character(character)
+        if legacy_name is None:
+            return None
+        return self.characters_dir / legacy_name
+
+    def existing_path_for_character(self, character: str) -> Path | None:
+        path = self.path_for_character(character)
+        if path.exists():
+            return path
+        legacy_path = self.legacy_path_for_character(character)
+        if legacy_path is not None and legacy_path.exists():
+            return legacy_path
+        return None
+
     def save_character(self, character: str, strokes: list[list[list[float]]]) -> Path:
         payload = {
             "character": character,
@@ -31,6 +47,10 @@ class CharacterStorage:
 
     def load_character(self, character: str) -> dict[str, Any]:
         path = self.path_for_character(character)
+        existing_path = self.existing_path_for_character(character)
+        if existing_path is not None:
+            path = existing_path
+
         if not path.exists():
             return {
                 "character": character,
@@ -61,3 +81,10 @@ class CharacterStorage:
         selected = characters or DEFAULT_CHARACTER_SEQUENCE
         return sum(1 for character in selected if self.has_character(character))
 
+    def saved_characters(self, characters: list[str] | None = None) -> list[str]:
+        selected = characters or DEFAULT_CHARACTER_SEQUENCE
+        return [character for character in selected if self.has_character(character)]
+
+    def missing_characters(self, characters: list[str] | None = None) -> list[str]:
+        selected = characters or DEFAULT_CHARACTER_SEQUENCE
+        return [character for character in selected if not self.has_character(character)]
