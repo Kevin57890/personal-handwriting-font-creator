@@ -27,6 +27,9 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QSlider,
     QStatusBar,
+    QStyle,
+    QSplitter,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
     QWizard,
@@ -279,52 +282,81 @@ class MainWindow(QMainWindow):
     def _build_ui(self) -> None:
         root = QWidget()
         root_layout = QVBoxLayout(root)
-        root_layout.setContentsMargins(14, 14, 14, 10)
+        root_layout.setContentsMargins(18, 18, 18, 12)
         root_layout.setSpacing(12)
 
         self.character_list = QListWidget()
-        self.character_list.setMinimumWidth(150)
-        self.character_list.setMaximumWidth(190)
+        self.character_list.setMinimumWidth(170)
         self.character_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.character_list.currentItemChanged.connect(self._on_character_item_changed)
+        self.character_filter_input = QLineEdit()
+        self.character_filter_input.setPlaceholderText("Find a glyph")
+        self.character_filter_input.setClearButtonEnabled(True)
+        self.character_filter_input.textChanged.connect(self._filter_character_list)
+        self.navigator_count_label = QLabel()
+        self.navigator_count_label.setObjectName("NavigatorCount")
+        self.next_missing_button = QPushButton("Next missing")
+        self.next_missing_button.setObjectName("PrimaryButton")
+        self.next_missing_button.setToolTip("Jump to the next character that has not been saved yet.")
+        self.next_missing_button.clicked.connect(self._go_next_missing)
 
         header = self._build_header()
-        main_layout = QHBoxLayout()
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(12)
+        main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        main_splitter.setChildrenCollapsible(False)
+        main_splitter.setHandleWidth(10)
 
         center_panel = QWidget()
         center_layout = QVBoxLayout(center_panel)
         center_layout.setContentsMargins(0, 0, 0, 0)
         center_layout.setSpacing(8)
 
+        glyph_header = QHBoxLayout()
+        glyph_header.setContentsMargins(0, 0, 0, 0)
+        glyph_header.setSpacing(10)
+        self.glyph_identity_label = QLabel()
+        self.glyph_identity_label.setObjectName("GlyphIdentity")
+        self.glyph_identity_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        glyph_copy = QVBoxLayout()
+        glyph_copy.setSpacing(1)
         self.prompt_label = QLabel()
         self.prompt_label.setObjectName("PromptLabel")
         prompt_font = QFont()
-        prompt_font.setPointSize(22)
+        prompt_font.setPointSize(20)
         prompt_font.setBold(True)
         self.prompt_label.setFont(prompt_font)
-        self.prompt_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.glyph_detail_label = QLabel()
+        self.glyph_detail_label.setObjectName("GlyphDetail")
+        glyph_copy.addWidget(self.prompt_label)
+        glyph_copy.addWidget(self.glyph_detail_label)
+        self.glyph_status_label = QLabel()
+        self.glyph_status_label.setObjectName("GlyphStatus")
+        glyph_header.addWidget(self.glyph_identity_label)
+        glyph_header.addLayout(glyph_copy, 1)
+        glyph_header.addWidget(self.glyph_status_label)
 
-        self.canvas_hint_label = QLabel("Draw inside the guide box. Save moves your work into the font project.")
+        self.canvas_hint_label = QLabel("Teal is the baseline. Amber is the x-height guide.")
         self.canvas_hint_label.setObjectName("CanvasHint")
         self.canvas_hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.canvas = HandwritingCanvas()
         self.canvas.stroke_changed.connect(self._on_canvas_changed)
 
-        center_layout.addWidget(self.prompt_label)
+        center_layout.addLayout(glyph_header)
         center_layout.addWidget(self.canvas_hint_label)
         center_layout.addWidget(self.canvas, 1)
         center_layout.addLayout(self._build_quick_actions())
 
         tools_panel = self._build_tools_panel()
-        main_layout.addWidget(self._wrap_panel("Character List", self.character_list), 0)
-        main_layout.addWidget(center_panel, 1)
-        main_layout.addWidget(tools_panel, 0)
+        main_splitter.addWidget(self._build_character_panel())
+        main_splitter.addWidget(center_panel)
+        main_splitter.addWidget(tools_panel)
+        main_splitter.setStretchFactor(0, 0)
+        main_splitter.setStretchFactor(1, 1)
+        main_splitter.setStretchFactor(2, 0)
+        main_splitter.setSizes([218, 760, 360])
 
         root_layout.addWidget(header)
-        root_layout.addLayout(main_layout, 1)
+        root_layout.addWidget(main_splitter, 1)
         self.setCentralWidget(root)
 
     def _build_header(self) -> QFrame:
@@ -368,31 +400,39 @@ class MainWindow(QMainWindow):
         self.quick_save_button.setObjectName("PrimaryButton")
         self.quick_next_button = QPushButton("Save and Next")
         self.quick_next_button.setObjectName("PrimaryButton")
-        self.quick_center_button = QPushButton("Center")
+        self.quick_fit_button = QPushButton("Fit to guides")
         self.quick_clear_button = QPushButton("Clear")
 
         self.quick_previous_button.clicked.connect(self._go_previous)
         self.quick_save_button.clicked.connect(self._save_current_character)
         self.quick_next_button.clicked.connect(self._go_next)
-        self.quick_center_button.clicked.connect(self.canvas.center_strokes)
+        self.quick_fit_button.clicked.connect(self.canvas.fit_strokes_to_guides)
         self.quick_clear_button.clicked.connect(self.canvas.clear)
+        self._set_button_icon(self.quick_previous_button, QStyle.StandardPixmap.SP_ArrowBack, "Go to the previous glyph.")
+        self._set_button_icon(self.quick_save_button, QStyle.StandardPixmap.SP_DialogSaveButton, "Save this glyph.")
+        self._set_button_icon(self.quick_next_button, QStyle.StandardPixmap.SP_ArrowForward, "Save this glyph and continue.")
+        self._set_button_icon(self.quick_clear_button, QStyle.StandardPixmap.SP_TrashIcon, "Remove all strokes from this glyph.")
 
         layout.addStretch(1)
         layout.addWidget(self.quick_previous_button)
         layout.addWidget(self.quick_clear_button)
-        layout.addWidget(self.quick_center_button)
+        layout.addWidget(self.quick_fit_button)
         layout.addWidget(self.quick_save_button)
         layout.addWidget(self.quick_next_button)
         layout.addStretch(1)
         return layout
 
     def _build_tools_panel(self) -> QWidget:
-        panel = QWidget()
+        panel = QFrame()
+        panel.setObjectName("Panel")
         panel.setMinimumWidth(330)
         panel.setMaximumWidth(380)
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
+        tools_title = QLabel("Workspace")
+        tools_title.setObjectName("PanelTitle")
+        layout.addWidget(tools_title)
 
         draw_box = QGroupBox("Draw")
         draw_layout = QGridLayout(draw_box)
@@ -444,7 +484,7 @@ class MainWindow(QMainWindow):
         self.right_button = QPushButton("Right")
         self.up_button = QPushButton("Up")
         self.down_button = QPushButton("Down")
-        self.preview_button = QPushButton("Preview Font")
+        self.preview_button = QPushButton("Refresh preview")
         self.generate_button = QPushButton("Generate Font")
         self.generate_button.setObjectName("ExportButton")
 
@@ -452,6 +492,8 @@ class MainWindow(QMainWindow):
         self.font_family_input.setPlaceholderText("Font family name")
         self.export_dir_input = QLineEdit(str(self.output_dir))
         self.export_dir_input.setReadOnly(True)
+        self.export_dir_input.setMinimumWidth(0)
+        self.export_dir_input.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.browse_output_button = QPushButton("Choose Folder")
         self.open_output_button = QPushButton("Open Output")
         self.copy_path_button = QPushButton("Copy Font Path")
@@ -487,6 +529,11 @@ class MainWindow(QMainWindow):
         self.restore_project_button.clicked.connect(self._restore_project)
         self.missing_report_button.clicked.connect(self._write_missing_report)
 
+        self._set_button_icon(self.clear_button, QStyle.StandardPixmap.SP_TrashIcon, "Remove all strokes from this glyph.")
+        self._set_button_icon(self.undo_button, QStyle.StandardPixmap.SP_ArrowBack, "Undo the last edit.")
+        self._set_button_icon(self.redo_button, QStyle.StandardPixmap.SP_ArrowForward, "Redo the last edit.")
+        self._set_button_icon(self.save_button, QStyle.StandardPixmap.SP_DialogSaveButton, "Save this glyph as editable vector strokes.")
+
         refine_layout.addWidget(self.clear_button, 0, 0)
         refine_layout.addWidget(self.undo_button, 0, 1)
         refine_layout.addWidget(self.redo_button, 0, 2)
@@ -508,6 +555,7 @@ class MainWindow(QMainWindow):
         self.preview_widget = VectorPreviewWidget(self.storage)
         preview_layout.addWidget(self.preview_input)
         preview_layout.addWidget(self.preview_widget)
+        preview_layout.addWidget(self.preview_button)
 
         project_box = QGroupBox("Project")
         project_layout = QGridLayout(project_box)
@@ -518,31 +566,78 @@ class MainWindow(QMainWindow):
         export_box = QGroupBox("Export")
         export_layout = QGridLayout(export_box)
         export_layout.addWidget(QLabel("Font name"), 0, 0)
-        export_layout.addWidget(self.font_family_input, 0, 1, 1, 2)
+        export_layout.addWidget(self.font_family_input, 0, 1)
         export_layout.addWidget(QLabel("Folder"), 1, 0)
-        export_layout.addWidget(self.export_dir_input, 1, 1)
-        export_layout.addWidget(self.browse_output_button, 1, 2)
-        export_layout.addWidget(self.generate_button, 2, 0, 1, 3)
-        export_layout.addWidget(self.open_output_button, 3, 0)
-        export_layout.addWidget(self.open_font_button, 3, 1)
-        export_layout.addWidget(self.install_font_button, 3, 2)
-        export_layout.addWidget(self.sample_page_button, 4, 0)
-        export_layout.addWidget(self.copy_path_button, 4, 1, 1, 2)
+        export_layout.addWidget(self.browse_output_button, 1, 1)
+        export_layout.addWidget(self.export_dir_input, 2, 0, 1, 2)
+        export_layout.addWidget(self.generate_button, 3, 0, 1, 2)
+        export_layout.addWidget(self.open_output_button, 4, 0)
+        export_layout.addWidget(self.open_font_button, 4, 1)
+        export_layout.addWidget(self.install_font_button, 5, 0)
+        export_layout.addWidget(self.sample_page_button, 5, 1)
+        export_layout.addWidget(self.copy_path_button, 6, 0, 1, 2)
+        export_layout.setColumnStretch(0, 1)
+        export_layout.setColumnStretch(1, 1)
 
-        stats_box = QGroupBox("Progress")
-        stats_layout = QVBoxLayout(stats_box)
-        self.progress_label = QLabel()
-        self.progress_label.setWordWrap(True)
-        stats_layout.addWidget(self.progress_label)
+        edit_tab = QWidget()
+        edit_tab_layout = QVBoxLayout(edit_tab)
+        edit_tab_layout.setContentsMargins(0, 8, 0, 0)
+        edit_tab_layout.setSpacing(10)
+        edit_tab_layout.addWidget(draw_box)
+        edit_tab_layout.addWidget(refine_box)
+        edit_tab_layout.addStretch(1)
 
-        layout.addWidget(draw_box)
-        layout.addWidget(refine_box)
-        layout.addWidget(preview_box)
-        layout.addWidget(project_box)
-        layout.addWidget(export_box)
-        layout.addWidget(stats_box)
-        layout.addStretch(1)
+        preview_tab = QWidget()
+        preview_tab_layout = QVBoxLayout(preview_tab)
+        preview_tab_layout.setContentsMargins(0, 8, 0, 0)
+        preview_tab_layout.setSpacing(10)
+        preview_tab_layout.addWidget(preview_box)
+        preview_tab_layout.addWidget(project_box)
+        preview_tab_layout.addStretch(1)
+
+        export_tab = QWidget()
+        export_tab_layout = QVBoxLayout(export_tab)
+        export_tab_layout.setContentsMargins(0, 8, 0, 0)
+        export_tab_layout.addWidget(export_box)
+        export_tab_layout.addStretch(1)
+
+        tabs = QTabWidget()
+        tabs.addTab(edit_tab, "Edit")
+        tabs.addTab(preview_tab, "Preview")
+        tabs.addTab(export_tab, "Export")
+        layout.addWidget(tabs, 1)
         return panel
+
+    def _build_character_panel(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("Panel")
+        frame.setMinimumWidth(202)
+        frame.setMaximumWidth(244)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(9)
+
+        title_row = QHBoxLayout()
+        title = QLabel("Glyph library")
+        title.setObjectName("PanelTitle")
+        title_row.addWidget(title)
+        title_row.addStretch(1)
+        title_row.addWidget(self.navigator_count_label)
+
+        layout.addLayout(title_row)
+        layout.addWidget(self.character_filter_input)
+        layout.addWidget(self.character_list, 1)
+        layout.addWidget(self.next_missing_button)
+        return frame
+
+    def _set_button_icon(
+        self,
+        button: QPushButton,
+        pixmap: QStyle.StandardPixmap,
+        tooltip: str,
+    ) -> None:
+        button.setIcon(self.style().standardIcon(pixmap))
+        button.setToolTip(tooltip)
 
     def _wrap_panel(self, title: str, widget: QWidget) -> QFrame:
         frame = QFrame()
@@ -578,8 +673,33 @@ class MainWindow(QMainWindow):
             character = item.data(Qt.ItemDataRole.UserRole)
             if character is None:
                 continue
-            status = "DONE" if self.storage.has_character(character) else "TODO"
-            item.setText(f"{status:4}  {character}")
+            saved = self.storage.has_character(character)
+            item.setText(character)
+            item.setForeground(QColor("#08796d") if saved else QColor("#7b8798"))
+            item.setToolTip("Saved glyph" if saved else "Not saved yet")
+            item_font = item.font()
+            item_font.setBold(saved)
+            item.setFont(item_font)
+        self._filter_character_list(self.character_filter_input.text())
+
+    def _filter_character_list(self, query: str) -> None:
+        normalized = query.strip().lower()
+        group_header: QListWidgetItem | None = None
+        group_has_visible_item = False
+        for row in range(self.character_list.count()):
+            item = self.character_list.item(row)
+            character = item.data(Qt.ItemDataRole.UserRole)
+            if character is None:
+                if group_header is not None:
+                    group_header.setHidden(not group_has_visible_item)
+                group_header = item
+                group_has_visible_item = False
+                continue
+            visible = not normalized or normalized in character.lower() or normalized in f"{ord(character):04x}"
+            item.setHidden(not visible)
+            group_has_visible_item = group_has_visible_item or visible
+        if group_header is not None:
+            group_header.setHidden(not group_has_visible_item)
 
     def _select_character(self, character: str) -> None:
         for row in range(self.character_list.count()):
@@ -612,7 +732,11 @@ class MainWindow(QMainWindow):
             data = self.storage.load_character(self.current_character)
             self.canvas.set_target_character(self.current_character)
             self.canvas.load_json_strokes(data.get("strokes", []))
-            self.prompt_label.setText(f"Please write: {self.current_character}")
+            self.glyph_identity_label.setText(self.current_character)
+            self.prompt_label.setText(f"Write {self.current_character}")
+            self.glyph_detail_label.setText(
+                f"{group_name_for_character(self.current_character)} | U+{ord(self.current_character):04X}"
+            )
             self._dirty = False
         finally:
             self._loading_character = False
@@ -641,6 +765,17 @@ class MainWindow(QMainWindow):
         index = DEFAULT_CHARACTER_SEQUENCE.index(self.current_character)
         next_index = min(len(DEFAULT_CHARACTER_SEQUENCE) - 1, index + 1)
         self._select_character(DEFAULT_CHARACTER_SEQUENCE[next_index])
+
+    def _go_next_missing(self) -> None:
+        self._save_current_character()
+        start_index = DEFAULT_CHARACTER_SEQUENCE.index(self.current_character)
+        for offset in range(1, len(DEFAULT_CHARACTER_SEQUENCE) + 1):
+            character = DEFAULT_CHARACTER_SEQUENCE[(start_index + offset) % len(DEFAULT_CHARACTER_SEQUENCE)]
+            if not self.storage.has_character(character):
+                self._select_character(character)
+                self.statusBar().showMessage(f"Next missing glyph: {character}", 2400)
+                return
+        self.statusBar().showMessage("Every glyph in this project is saved.", 3000)
 
     def _refresh_preview(self) -> None:
         self.preview_widget.reload_data()
@@ -817,9 +952,11 @@ class MainWindow(QMainWindow):
         self.step_label.setText(f"{group} {index}/{total}")
         self.header_progress.setValue(saved)
         self.progress_text_label.setText(f"{saved}/{total} saved")
-        self.progress_label.setText(
-            f"Current: {self.current_character} / U+{ord(self.current_character):04X}\n"
-            f"Group: {group}\n"
-            f"Saved: {saved}/{total}\n"
-            f"State: {dirty}"
-        )
+        self.navigator_count_label.setText(f"{saved}/{total}")
+        self.glyph_status_label.setText(dirty)
+        self.glyph_status_label.setProperty("state", "dirty" if self._dirty else "saved")
+        self.glyph_status_label.style().unpolish(self.glyph_status_label)
+        self.glyph_status_label.style().polish(self.glyph_status_label)
+        self.next_missing_button.setEnabled(saved < total)
+        self.undo_button.setEnabled(self.canvas.manager.can_undo())
+        self.redo_button.setEnabled(self.canvas.manager.can_redo())

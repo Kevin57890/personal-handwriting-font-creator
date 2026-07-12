@@ -199,6 +199,47 @@ class StrokeManager:
         current_center_y = (min_y + max_y) / 2.0
         self.translate(width / 2.0 - current_center_x, height / 2.0 - current_center_y)
 
+    def fit_to_rect(
+        self,
+        left: float,
+        top: float,
+        width: float,
+        height: float,
+        *,
+        align_bottom: bool = True,
+    ) -> bool:
+        """Scale strokes proportionally into a target rect in one undoable edit."""
+        bounds = self.bounds()
+        if bounds is None:
+            return False
+
+        min_x, min_y, max_x, max_y = bounds
+        source_width = max(0.01, max_x - min_x)
+        source_height = max(0.01, max_y - min_y)
+        target_width = max(1.0, float(width))
+        target_height = max(1.0, float(height))
+        scale = min(target_width / source_width, target_height / source_height)
+
+        fitted_width = source_width * scale
+        fitted_height = source_height * scale
+        offset_x = float(left) + (target_width - fitted_width) / 2.0 - min_x * scale
+        if align_bottom:
+            offset_y = float(top) + target_height - fitted_height - min_y * scale
+        else:
+            offset_y = float(top) + (target_height - fitted_height) / 2.0 - min_y * scale
+
+        self._push_undo()
+        self._redo_stack.clear()
+        for stroke in self.strokes:
+            for point in stroke:
+                point.x = point.x * scale + offset_x
+                point.y = point.y * scale + offset_y
+        if self.current_stroke:
+            for point in self.current_stroke:
+                point.x = point.x * scale + offset_x
+                point.y = point.y * scale + offset_y
+        return True
+
     def erase_near(self, x: float, y: float, radius: float) -> bool:
         if not self.strokes:
             return False

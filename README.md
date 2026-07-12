@@ -1,33 +1,36 @@
 # Personal Handwriting Font Creator
 
-![Personal Handwriting Font Creator interface](docs/assets/readme-hero.svg)
+Turn handwriting drawn in a desktop editor into a real installable TrueType font. Every character stays editable as vector stroke data until you export a `.ttf` file.
 
-Create a real installable TrueType font from handwriting drawn directly inside a desktop editor. The app stores every character as vector strokes, previews your handwritten text, and exports a `.ttf` file you can install and use in Microsoft Word, Pages, Keynote, Photoshop, or any app that supports system fonts.
+![Actual handwriting editor screenshot](docs/assets/app-editor.png)
 
-## Highlights
+_Actual screenshot from the current desktop build. The canvas, glyph library, guide lines, editing tools, and handwritten sample are all from the running application._
 
-- Direct handwriting canvas for uppercase letters, lowercase letters, numbers, and punctuation.
-- Vector stroke storage in Unicode-safe `characters/*.json`, including point order, timestamp, and pressure.
-- Built-in editing tools: pen, eraser, move, undo, redo, center, scale, nudge, clear, save, and save-next.
-- Live handwriting preview from saved strokes.
-- One-click font export with custom family name, output folder, and automatic HTML sample page.
-- Convenient export actions: open generated font, install font, open output folder, and copy font path.
-- Project backup and restore as portable `.zip` archives.
-- Missing character report for finishing a usable font faster.
-- TrueType generation with `fontTools`: glyph outlines, Unicode cmap, metrics, names, and font tables.
+## Built For The Writing Loop
 
-## How It Works
+| In the editor | What it helps with |
+| --- | --- |
+| Glyph library with saved-state color | See what is ready, filter by character or Unicode codepoint, and jump to the next missing glyph. |
+| Writing canvas | Draw with mouse or tablet, with baseline and x-height guides visible while writing. |
+| Editing workspace | Pen, eraser, move, undo, redo, clear, scale, nudge, center, and one-click fit-to-guides. |
+| Live preview | Type a sample phrase and inspect saved vector glyphs before generating a font. |
+| Project tools | Create a portable backup, restore a project, or produce a missing-glyph checklist. |
 
-![Generation flow](docs/assets/generation-flow.svg)
+## Export Without Friction
 
-The font pipeline is fully local:
+![Actual export workflow screenshot](docs/assets/app-export.png)
 
-1. Draw a character in the canvas.
-2. Save vector strokes as JSON.
-3. Fit and sample smooth Bezier-like paths.
-4. Expand strokes into filled glyph outlines.
-5. Build a TrueType font with Unicode mappings.
-6. Export a browser sample page and optional project backup.
+_Actual screenshot from the current desktop build. The export tab keeps font naming, output location, generation, installation, and sample-page actions in one place._
+
+The export pipeline is fully local:
+
+1. Draw and save a character.
+2. Store its ordered strokes as Unicode-safe JSON, including time and pressure data.
+3. Convert sampled paths into expanded glyph outlines.
+4. Build a TrueType font with glyph metrics, name tables, and Unicode mappings.
+5. Generate a browser sample page and optionally install the resulting font.
+
+No scanned images are used to create the font. The application stores vector strokes and builds actual TrueType outlines with `fontTools`.
 
 ## Quick Start
 
@@ -86,6 +89,13 @@ Open the sample page in a browser to review your generated font, glyph coverage,
 - **Missing Report** writes a plain-text checklist of saved and missing characters.
 - Character files use Unicode-based names, so uppercase and lowercase glyphs remain separate on case-insensitive file systems.
 - Character JSON remains local by default and is ignored by git.
+
+## Feature Notes
+
+- The app supports mouse input today and records tablet pressure when the device provides it.
+- `Fit to guides` preserves the character's proportions while placing it consistently in the writing frame.
+- `Next missing` keeps a long capture session moving without manually hunting through the alphabet.
+- Fonts may be exported before every character is complete; the editor makes the partial-font decision explicit.
 
 ## Project Structure
 

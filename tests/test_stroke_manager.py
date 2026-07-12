@@ -36,7 +36,20 @@ class StrokeManagerTests(unittest.TestCase):
         manager.load_json_strokes([[[1, 2, 3, 0.5], [4, 5, 6, 0.7]]])
         self.assertEqual(manager.to_json_strokes(), [[[1.0, 2.0, 3.0, 0.5], [4.0, 5.0, 6.0, 0.7]]])
 
+    def test_fit_to_rect_preserves_aspect_ratio_and_undo(self) -> None:
+        manager = StrokeManager()
+        manager.load_json_strokes([[[10, 20, 1, 1], [110, 70, 2, 1]]])
+
+        self.assertTrue(manager.fit_to_rect(100, 120, 240, 160))
+        min_x, min_y, max_x, max_y = manager.bounds() or (0, 0, 0, 0)
+        self.assertAlmostEqual(min_x, 100)
+        self.assertAlmostEqual(max_x, 340)
+        self.assertAlmostEqual(max_y, 280)
+        self.assertAlmostEqual(max_y - min_y, 120)
+
+        self.assertTrue(manager.undo())
+        self.assertEqual(manager.bounds(), (10.0, 20.0, 110.0, 70.0))
+
 
 if __name__ == "__main__":
     unittest.main()
-

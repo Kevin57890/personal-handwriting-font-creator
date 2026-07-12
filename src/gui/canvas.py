@@ -70,6 +70,20 @@ class HandwritingCanvas(QWidget):
         self.stroke_changed.emit()
         self.update()
 
+    def fit_strokes_to_guides(self) -> None:
+        """Fit a glyph inside the writing area while keeping its baseline consistent."""
+        baseline = self.CANVAS_SIZE * 0.72
+        horizontal_margin = self.CANVAS_SIZE * 0.16
+        top = self.CANVAS_SIZE * 0.14
+        if self.manager.fit_to_rect(
+            horizontal_margin,
+            top,
+            self.CANVAS_SIZE - horizontal_margin * 2,
+            baseline - top,
+        ):
+            self.stroke_changed.emit()
+            self.update()
+
     def scale_strokes(self, factor: float) -> None:
         self.manager.scale_about_center(factor)
         self.stroke_changed.emit()
