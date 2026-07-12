@@ -8,6 +8,7 @@ from fontTools.ttLib import TTFont
 
 from src.data.character_storage import CharacterStorage
 from src.data.project_package import ProjectPackage
+from src.font.font_patcher import FontPatcher
 from src.font.glyph_generator import GlyphGenerator
 from src.font.sample_exporter import FontSampleExporter
 from src.font.ttf_builder import TTFBuilder
@@ -66,6 +67,84 @@ class StorageAndFontTests(unittest.TestCase):
             self.assertEqual(cmap[ord("!")], "uni0021")
             self.assertIn("glyf", font)
             self.assertIn("hmtx", font)
+
+    def test_font_patcher_replaces_only_selected_base_glyphs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            base_storage = CharacterStorage(root / "base-characters")
+            base_storage.save_character(
+                "A",
+                [[[260, 590, 1.0, 1.0], [260, 160, 1.1, 1.0]]],
+            )
+            base_storage.save_character(
+                "B",
+                [[[180, 590, 1.0, 1.0], [180, 160, 1.1, 1.0]]],
+            )
+            base_path = TTFBuilder(base_storage, family_name="BaseUnit").build(root / "BaseUnit.ttf")
+
+            patch_storage = CharacterStorage(root / "patch-characters")
+            patch_storage.save_character(
+                "A",
+                [
+                    [[120, 590, 1.0, 1.0], [360, 150, 1.1, 1.0], [600, 590, 1.2, 1.0]],
+                    [[220, 420, 1.3, 1.0], [500, 420, 1.4, 1.0]],
+                ],
+            )
+
+            info = FontPatcher.inspect(base_path)
+            self.assertIn("A", info.supported_characters)
+            self.assertIn("B", info.supported_characters)
+
+            before = TTFont(base_path)
+            before_cmap = before.getBestCmap()
+            before_a_metric = before["hmtx"].metrics[before_cmap[ord("A")]]
+            before_b_metric = before["hmtx"].metrics[before_cmap[ord("B")]]
+
+            result = FontPatcher(patch_storage, family_name="PatchedUnit").build(
+                source_path=base_path,
+                output_path=root / "PatchedUnit.ttf",
+                characters=["A"],
+            )
+            self.assertEqual(result.replaced_characters, ("A",))
+
+            patched = TTFont(result.output_path)
+            patched_cmap = patched.getBestCmap()
+            self.assertEqual(patched_cmap[ord("A")], before_cmap[ord("A")])
+            self.assertEqual(patched["hmtx"].metrics[patched_cmap[ord("B")]], before_b_metric)
+            self.assertNotEqual(patched["hmtx"].metrics[patched_cmap[ord("A")]], before_a_metric)
+            self.assertEqual(patched["name"].getDebugName(1), "PatchedUnit")
+
+    def test_font_patcher_clones_shared_glyph_before_replacing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            storage = CharacterStorage(root / "characters")
+            storage.save_character("A", [[[200, 590, 1.0, 1.0], [200, 160, 1.1, 1.0]]])
+            base_path = TTFBuilder(storage, family_name="SharedBase").build(root / "SharedBase.ttf")
+
+            shared_font = TTFont(base_path)
+            glyph_name = shared_font.getBestCmap()[ord("A")]
+            for table in shared_font["cmap"].tables:
+                if table.isUnicode() and ord("B") in table.cmap:
+                    table.cmap[ord("B")] = glyph_name
+            shared_font.save(base_path)
+
+            patch_storage = CharacterStorage(root / "patch-characters")
+            patch_storage.save_character(
+                "A",
+                [
+                    [[100, 590, 1.0, 1.0], [360, 140, 1.1, 1.0], [620, 590, 1.2, 1.0]],
+                    [[220, 410, 1.3, 1.0], [500, 410, 1.4, 1.0]],
+                ],
+            )
+
+            output = FontPatcher(patch_storage, family_name="SharedPatched").build(
+                source_path=base_path,
+                output_path=root / "SharedPatched.ttf",
+                characters=["A"],
+            ).output_path
+            patched = TTFont(output)
+            cmap = patched.getBestCmap()
+            self.assertNotEqual(cmap[ord("A")], cmap[ord("B")])
 
     def test_project_package_exports_restores_and_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

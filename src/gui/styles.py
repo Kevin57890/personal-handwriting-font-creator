@@ -87,6 +87,16 @@ QLabel#GlyphStatus[state="dirty"] {
     color: #8a5b08;
 }
 
+QLabel#GlyphStatus[state="patch"] {
+    background: #e4f3f0;
+    color: #0f665f;
+}
+
+QLabel#GlyphStatus[state="base"] {
+    background: #eaf0f7;
+    color: #426383;
+}
+
 QLabel#NavigatorCount {
     color: #687586;
     font-size: 12px;
@@ -130,6 +140,17 @@ QLabel#SectionLabel {
     padding-top: 4px;
 }
 
+QLabel#BaseFontName {
+    color: #25384a;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+QLabel#BaseFontDetail {
+    color: #768496;
+    font-size: 12px;
+}
+
 QListWidget {
     background: transparent;
     border: 0;
@@ -145,6 +166,23 @@ QListWidget::item {
 QListWidget::item:selected {
     background: #e1f1ee;
     color: #0d5d58;
+}
+
+QListWidget::indicator {
+    width: 14px;
+    height: 14px;
+}
+
+QListWidget::indicator:unchecked {
+    border: 1px solid #b8c6d2;
+    border-radius: 3px;
+    background: #ffffff;
+}
+
+QListWidget::indicator:checked {
+    border: 1px solid #15766f;
+    border-radius: 3px;
+    background: #15766f;
 }
 
 QLineEdit {

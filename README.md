@@ -4,7 +4,7 @@ Turn handwriting drawn in a desktop editor into a real installable TrueType font
 
 ![Actual handwriting editor screenshot](docs/assets/app-editor.png)
 
-_Actual screenshot from the current desktop build. The canvas, glyph library, guide lines, editing tools, and handwritten sample are all from the running application._
+_Actual screenshot from the current desktop build. In base-font mode, checked glyphs are the only characters selected for replacement._
 
 ## Built For The Writing Loop
 
@@ -15,12 +15,13 @@ _Actual screenshot from the current desktop build. The canvas, glyph library, gu
 | Editing workspace | Pen, eraser, move, undo, redo, clear, scale, nudge, center, and one-click fit-to-guides. |
 | Live preview | Type a sample phrase and inspect saved vector glyphs before generating a font. |
 | Project tools | Create a portable backup, restore a project, or produce a missing-glyph checklist. |
+| Base-font patching | Import a static TTF, select only the saved glyphs to replace, and retain every other glyph from the original font. |
 
 ## Export Without Friction
 
 ![Actual export workflow screenshot](docs/assets/app-export.png)
 
-_Actual screenshot from the current desktop build. The export tab keeps font naming, output location, generation, installation, and sample-page actions in one place._
+_Actual screenshot from the current desktop build. The export tab shows the attached base font, selected replacements, font naming, output location, generation, installation, and sample-page actions in one place._
 
 The export pipeline is fully local:
 
@@ -31,6 +32,15 @@ The export pipeline is fully local:
 5. Generate a browser sample page and optionally install the resulting font.
 
 No scanned images are used to create the font. The application stores vector strokes and builds actual TrueType outlines with `fontTools`.
+
+## Modify An Existing Font
+
+1. Open the **Export** tab and choose **Import TTF**.
+2. Draw and save the characters you want to change.
+3. In the glyph library, check only the saved glyphs that should replace the imported font.
+4. Choose a new family name and click **Generate Font**.
+
+The exported font keeps all unselected glyphs, metrics, and tables from the imported font. Static `.ttf` fonts are supported; variable fonts and CFF-based `.otf` fonts should be exported to a static TTF before patching.
 
 ## Quick Start
 
@@ -96,6 +106,7 @@ Open the sample page in a browser to review your generated font, glyph coverage,
 - `Fit to guides` preserves the character's proportions while placing it consistently in the writing frame.
 - `Next missing` keeps a long capture session moving without manually hunting through the alphabet.
 - Fonts may be exported before every character is complete; the editor makes the partial-font decision explicit.
+- In base-font mode, saving a supported glyph automatically selects it for replacement; uncheck it in the glyph library to keep the original version.
 
 ## Project Structure
 
@@ -112,6 +123,7 @@ PersonalHandwritingFontCreator/
       stroke_manager.py
     font/
       glyph_generator.py
+      font_patcher.py
       ttf_builder.py
     data/
       character_storage.py

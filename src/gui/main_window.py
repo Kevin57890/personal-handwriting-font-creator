@@ -39,6 +39,7 @@ from PyQt6.QtWidgets import (
 
 from src.data.character_storage import CharacterStorage
 from src.data.project_package import ProjectPackage
+from src.font.font_patcher import BaseFontInfo, FontPatchError, FontPatcher
 from src.font.sample_exporter import FontSampleExporter
 from src.font.ttf_builder import TTFBuilder
 from src.gui.canvas import HandwritingCanvas
@@ -207,9 +208,12 @@ class MainWindow(QMainWindow):
         self.output_dir.mkdir(exist_ok=True)
         self.current_character = DEFAULT_CHARACTER_SEQUENCE[0]
         self._loading_character = False
+        self._refreshing_character_list = False
         self._dirty = False
         self.last_generated_font: Path | None = None
         self.last_sample_path: Path | None = None
+        self.base_font_info: BaseFontInfo | None = None
+        self.patch_characters: set[str] = set()
 
         self.setWindowTitle("Personal Handwriting Font Creator")
         self.setStyleSheet(APP_STYLESHEET)
@@ -290,6 +294,7 @@ class MainWindow(QMainWindow):
         self.character_list.setMinimumWidth(170)
         self.character_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.character_list.currentItemChanged.connect(self._on_character_item_changed)
+        self.character_list.itemChanged.connect(self._on_patch_item_changed)
         self.character_filter_input = QLineEdit()
         self.character_filter_input.setPlaceholderText("Find a glyph")
         self.character_filter_input.setClearButtonEnabled(True)
@@ -513,6 +518,16 @@ class MainWindow(QMainWindow):
         self.backup_project_button = QPushButton("Backup Project")
         self.restore_project_button = QPushButton("Restore Project")
         self.missing_report_button = QPushButton("Missing Report")
+        self.import_base_font_button = QPushButton("Import TTF")
+        self.clear_base_font_button = QPushButton("Clear base")
+        self.select_saved_patch_button = QPushButton("Select saved")
+        self.clear_patch_selection_button = QPushButton("Clear selection")
+        self.base_font_name_label = QLabel("No base font selected")
+        self.base_font_name_label.setObjectName("BaseFontName")
+        self.base_font_detail_label = QLabel()
+        self.base_font_detail_label.setObjectName("BaseFontDetail")
+        self.base_font_name_label.setWordWrap(True)
+        self.base_font_detail_label.setWordWrap(True)
 
         self.clear_button.clicked.connect(self.canvas.clear)
         self.undo_button.clicked.connect(self.canvas.undo)
@@ -535,6 +550,10 @@ class MainWindow(QMainWindow):
         self.backup_project_button.clicked.connect(self._backup_project)
         self.restore_project_button.clicked.connect(self._restore_project)
         self.missing_report_button.clicked.connect(self._write_missing_report)
+        self.import_base_font_button.clicked.connect(self._import_base_font)
+        self.clear_base_font_button.clicked.connect(self._clear_base_font)
+        self.select_saved_patch_button.clicked.connect(self._select_saved_patch_characters)
+        self.clear_patch_selection_button.clicked.connect(self._clear_patch_selection)
 
         self._set_button_icon(self.clear_button, QStyle.StandardPixmap.SP_TrashIcon, "Remove all strokes from this glyph.")
         self._set_button_icon(self.undo_button, QStyle.StandardPixmap.SP_ArrowBack, "Undo the last edit.")
@@ -572,6 +591,15 @@ class MainWindow(QMainWindow):
         project_layout.addWidget(self.restore_project_button, 0, 1)
         project_layout.addWidget(self.missing_report_button, 1, 0, 1, 2)
 
+        base_font_box = QGroupBox("Base Font")
+        base_font_layout = QGridLayout(base_font_box)
+        base_font_layout.addWidget(self.base_font_name_label, 0, 0, 1, 2)
+        base_font_layout.addWidget(self.base_font_detail_label, 1, 0, 1, 2)
+        base_font_layout.addWidget(self.import_base_font_button, 2, 0)
+        base_font_layout.addWidget(self.clear_base_font_button, 2, 1)
+        base_font_layout.addWidget(self.select_saved_patch_button, 3, 0)
+        base_font_layout.addWidget(self.clear_patch_selection_button, 3, 1)
+
         export_box = QGroupBox("Export")
         export_layout = QGridLayout(export_box)
         export_layout.addWidget(QLabel("Font name"), 0, 0)
@@ -607,6 +635,8 @@ class MainWindow(QMainWindow):
         export_tab = QWidget()
         export_tab_layout = QVBoxLayout(export_tab)
         export_tab_layout.setContentsMargins(0, 8, 0, 0)
+        export_tab_layout.setSpacing(10)
+        export_tab_layout.addWidget(base_font_box)
         export_tab_layout.addWidget(export_box)
         export_tab_layout.addStretch(1)
 
@@ -689,19 +719,64 @@ class MainWindow(QMainWindow):
         self._refresh_character_list_labels()
 
     def _refresh_character_list_labels(self) -> None:
-        for row in range(self.character_list.count()):
-            item = self.character_list.item(row)
-            character = item.data(Qt.ItemDataRole.UserRole)
-            if character is None:
-                continue
-            saved = self.storage.has_character(character)
-            item.setText(character)
-            item.setForeground(QColor("#08796d") if saved else QColor("#7b8798"))
-            item.setToolTip("Saved glyph" if saved else "Not saved yet")
-            item_font = item.font()
-            item_font.setBold(saved)
-            item.setFont(item_font)
+        self._refreshing_character_list = True
+        try:
+            for row in range(self.character_list.count()):
+                item = self.character_list.item(row)
+                character = item.data(Qt.ItemDataRole.UserRole)
+                if character is None:
+                    continue
+
+                saved = self.storage.has_character(character)
+                in_base_font = bool(
+                    self.base_font_info and character in self.base_font_info.supported_characters
+                )
+                can_patch = saved and in_base_font
+                flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+                if can_patch:
+                    flags |= Qt.ItemFlag.ItemIsUserCheckable
+                item.setFlags(flags)
+                if can_patch:
+                    item.setCheckState(
+                        Qt.CheckState.Checked
+                        if character in self.patch_characters
+                        else Qt.CheckState.Unchecked
+                    )
+                else:
+                    item.setData(Qt.ItemDataRole.CheckStateRole, None)
+                item.setText(character)
+
+                if character in self.patch_characters and can_patch:
+                    item.setForeground(QColor("#08796d"))
+                    item.setToolTip("Selected to replace the imported glyph")
+                elif in_base_font:
+                    item.setForeground(QColor("#4d6f91"))
+                    item.setToolTip("Available from the imported base font")
+                elif saved:
+                    item.setForeground(QColor("#a16207"))
+                    item.setToolTip("Saved strokes; this character is not in the base font")
+                else:
+                    item.setForeground(QColor("#7b8798"))
+                    item.setToolTip("Not saved yet")
+
+                item_font = item.font()
+                item_font.setBold(saved or in_base_font)
+                item.setFont(item_font)
+        finally:
+            self._refreshing_character_list = False
         self._filter_character_list(self.character_filter_input.text())
+
+    def _on_patch_item_changed(self, item: QListWidgetItem) -> None:
+        if self._refreshing_character_list or self.base_font_info is None:
+            return
+        character = item.data(Qt.ItemDataRole.UserRole)
+        if character is None or character not in self.base_font_info.supported_characters:
+            return
+        if item.checkState() == Qt.CheckState.Checked and self.storage.has_character(character):
+            self.patch_characters.add(character)
+        else:
+            self.patch_characters.discard(character)
+        self._update_status()
 
     def _filter_character_list(self, query: str) -> None:
         normalized = query.strip().lower()
@@ -770,6 +845,14 @@ class MainWindow(QMainWindow):
 
     def _save_current_character(self) -> None:
         self.storage.save_character(self.current_character, self.canvas.to_json_strokes())
+        if self.base_font_info is not None:
+            if (
+                self.storage.has_character(self.current_character)
+                and self.current_character in self.base_font_info.supported_characters
+            ):
+                self.patch_characters.add(self.current_character)
+            else:
+                self.patch_characters.discard(self.current_character)
         self._dirty = False
         self._refresh_preview()
         self._refresh_character_list_labels()
@@ -798,6 +881,70 @@ class MainWindow(QMainWindow):
                 return
         self.statusBar().showMessage("Every glyph in this project is saved.", 3000)
 
+    def _import_base_font(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Base TrueType Font",
+            str(self.project_root),
+            "TrueType Font (*.ttf)",
+        )
+        if not path:
+            return
+        try:
+            info = FontPatcher.inspect(Path(path))
+        except FontPatchError as error:
+            QMessageBox.warning(self, "Cannot Import Font", str(error))
+            return
+
+        self.base_font_info = info
+        self.patch_characters = {
+            character
+            for character in self.storage.saved_characters()
+            if character in info.supported_characters
+        }
+        self.font_family_input.setText(f"{info.family_name} Handwritten")
+        self._refresh_character_list_labels()
+        self._update_status()
+        self.statusBar().showMessage(
+            f"Imported {info.family_name}. {len(self.patch_characters)} glyphs selected for replacement.",
+            5000,
+        )
+
+    def _clear_base_font(self) -> None:
+        self.base_font_info = None
+        self.patch_characters.clear()
+        self._refresh_character_list_labels()
+        self._update_status()
+        self.statusBar().showMessage("Base font removed. New fonts will be built from saved strokes.", 4000)
+
+    def _select_saved_patch_characters(self) -> None:
+        if self.base_font_info is None:
+            self.statusBar().showMessage("Import a base TTF first.", 2400)
+            return
+        self.patch_characters = {
+            character
+            for character in self.storage.saved_characters()
+            if character in self.base_font_info.supported_characters
+        }
+        self._refresh_character_list_labels()
+        self._update_status()
+
+    def _clear_patch_selection(self) -> None:
+        self.patch_characters.clear()
+        self._refresh_character_list_labels()
+        self._update_status()
+
+    def _selected_patch_characters(self) -> list[str]:
+        if self.base_font_info is None:
+            return []
+        return [
+            character
+            for character in DEFAULT_CHARACTER_SEQUENCE
+            if character in self.patch_characters
+            and character in self.base_font_info.supported_characters
+            and self.storage.has_character(character)
+        ]
+
     def _refresh_preview(self) -> None:
         self.preview_widget.reload_data()
 
@@ -813,29 +960,63 @@ class MainWindow(QMainWindow):
         family_name = self.font_family_input.text().strip() or "MyHandwriting"
         saved = self.storage.saved_count()
         total = len(DEFAULT_CHARACTER_SEQUENCE)
-        if saved == 0:
-            QMessageBox.warning(self, "No Characters Saved", "Write and save at least one character before exporting.")
-            return
-        if saved < total:
-            answer = QMessageBox.question(
-                self,
-                "Export Partial Font",
-                f"{saved}/{total} characters are saved. Export the partial font now?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.Yes,
-            )
-            if answer != QMessageBox.StandardButton.Yes:
-                return
         output_path = self.output_dir / f"{self._safe_font_filename(family_name)}.ttf"
-        builder = TTFBuilder(storage=self.storage, family_name=family_name)
-        written_path = builder.build(output_path=output_path)
+        patched_characters: list[str] = []
+
+        if self.base_font_info is not None:
+            patched_characters = self._selected_patch_characters()
+            if not patched_characters:
+                QMessageBox.warning(
+                    self,
+                    "No Glyphs Selected",
+                    "Select at least one saved glyph to replace in the imported font.",
+                )
+                return
+            try:
+                result = FontPatcher(storage=self.storage, family_name=family_name).build(
+                    source_path=self.base_font_info.path,
+                    output_path=output_path,
+                    characters=patched_characters,
+                )
+            except FontPatchError as error:
+                QMessageBox.warning(self, "Font Export Failed", str(error))
+                return
+            written_path = result.output_path
+        else:
+            if saved == 0:
+                QMessageBox.warning(
+                    self,
+                    "No Characters Saved",
+                    "Write and save at least one character before exporting.",
+                )
+                return
+            if saved < total:
+                answer = QMessageBox.question(
+                    self,
+                    "Export Partial Font",
+                    f"{saved}/{total} characters are saved. Export the partial font now?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.Yes,
+                )
+                if answer != QMessageBox.StandardButton.Yes:
+                    return
+            builder = TTFBuilder(storage=self.storage, family_name=family_name)
+            written_path = builder.build(output_path=output_path)
+
         self.last_generated_font = written_path
         self._export_sample_page(show_message=False)
         QApplication.clipboard().setText(str(written_path))
+        if patched_characters:
+            export_summary = f"Replaced {len(patched_characters)} glyphs in the imported font.\n\n"
+            dialog_title = "Patched Font Generated"
+        else:
+            export_summary = ""
+            dialog_title = "Font Generated"
         QMessageBox.information(
             self,
-            "Font Generated",
-            f"Generated font:\n{written_path}\n\nA sample page was also created.\nThe font path was copied to the clipboard.",
+            dialog_title,
+            f"{export_summary}Generated font:\n{written_path}\n\n"
+            "A sample page was also created.\nThe font path was copied to the clipboard.",
         )
         self.statusBar().showMessage(f"Generated {written_path}", 5000)
 
@@ -886,13 +1067,23 @@ class MainWindow(QMainWindow):
             return
         family_name = self.font_family_input.text().strip() or "MyHandwriting"
         sample_path = self.last_generated_font.with_name(f"{self.last_generated_font.stem}-sample.html")
+        sample_saved_count = (
+            len(self._selected_patch_characters())
+            if self.base_font_info is not None
+            else self.storage.saved_count()
+        )
+        sample_total_count = (
+            len(self.base_font_info.supported_characters)
+            if self.base_font_info is not None
+            else len(DEFAULT_CHARACTER_SEQUENCE)
+        )
         self.last_sample_path = FontSampleExporter().export_html(
             output_path=sample_path,
             font_path=self.last_generated_font,
             family_name=family_name,
             sample_text=self.preview_input.text(),
-            saved_count=self.storage.saved_count(),
-            total_count=len(DEFAULT_CHARACTER_SEQUENCE),
+            saved_count=sample_saved_count,
+            total_count=sample_total_count,
         )
         if show_message:
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.last_sample_path)))
@@ -968,14 +1159,48 @@ class MainWindow(QMainWindow):
         saved = self.storage.saved_count()
         total = len(DEFAULT_CHARACTER_SEQUENCE)
         group = group_name_for_character(self.current_character)
-        dirty = "Unsaved changes" if self._dirty else "Saved"
         index = DEFAULT_CHARACTER_SEQUENCE.index(self.current_character) + 1
         self.step_label.setText(f"{group} {index}/{total}")
-        self.header_progress.setValue(saved)
-        self.progress_text_label.setText(f"{saved}/{total} saved")
-        self.navigator_count_label.setText(f"{saved}/{total}")
-        self.glyph_status_label.setText(dirty)
-        self.glyph_status_label.setProperty("state", "dirty" if self._dirty else "saved")
+
+        if self.base_font_info is not None:
+            selected = len(self._selected_patch_characters())
+            base_total = max(1, len(self.base_font_info.supported_characters))
+            self.header_progress.setRange(0, base_total)
+            self.header_progress.setValue(selected)
+            self.progress_text_label.setText(f"{selected} selected")
+            self.navigator_count_label.setText(f"{selected} patch")
+            self.base_font_name_label.setText(self.base_font_info.family_name)
+            self.base_font_name_label.setToolTip(str(self.base_font_info.path))
+            self.base_font_detail_label.setText(
+                f"{len(self.base_font_info.supported_characters)} available | {selected} replacements"
+            )
+            self.clear_base_font_button.setEnabled(True)
+            self.select_saved_patch_button.setEnabled(True)
+            self.clear_patch_selection_button.setEnabled(bool(selected))
+            if self._dirty:
+                status_text, status_state = "Unsaved changes", "dirty"
+            elif self.current_character in self.patch_characters:
+                status_text, status_state = "Will replace", "patch"
+            elif self.current_character in self.base_font_info.supported_characters:
+                status_text, status_state = "Base glyph", "base"
+            else:
+                status_text, status_state = "Not in base", "saved"
+        else:
+            self.header_progress.setRange(0, total)
+            self.header_progress.setValue(saved)
+            self.progress_text_label.setText(f"{saved}/{total} saved")
+            self.navigator_count_label.setText(f"{saved}/{total}")
+            self.base_font_name_label.setText("No base font selected")
+            self.base_font_name_label.setToolTip("")
+            self.base_font_detail_label.setText(f"{saved} saved glyphs")
+            self.clear_base_font_button.setEnabled(False)
+            self.select_saved_patch_button.setEnabled(False)
+            self.clear_patch_selection_button.setEnabled(False)
+            status_text = "Unsaved changes" if self._dirty else "Saved"
+            status_state = "dirty" if self._dirty else "saved"
+
+        self.glyph_status_label.setText(status_text)
+        self.glyph_status_label.setProperty("state", status_state)
         self.glyph_status_label.style().unpolish(self.glyph_status_label)
         self.glyph_status_label.style().polish(self.glyph_status_label)
         self.next_missing_button.setEnabled(saved < total)
