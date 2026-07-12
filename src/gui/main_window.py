@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
     QStyle,
     QSplitter,
     QTabWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
     QWizard,
@@ -400,7 +401,7 @@ class MainWindow(QMainWindow):
         self.quick_save_button.setObjectName("PrimaryButton")
         self.quick_next_button = QPushButton("Save and Next")
         self.quick_next_button.setObjectName("PrimaryButton")
-        self.quick_fit_button = QPushButton("Fit to guides")
+        self.quick_fit_button = QPushButton("Fit glyph")
         self.quick_clear_button = QPushButton("Clear")
 
         self.quick_previous_button.clicked.connect(self._go_previous)
@@ -474,16 +475,25 @@ class MainWindow(QMainWindow):
         self.clear_button = QPushButton("Clear")
         self.undo_button = QPushButton("Undo")
         self.redo_button = QPushButton("Redo")
-        self.save_button = QPushButton("Save Character")
-        self.previous_button = QPushButton("Previous")
-        self.next_button = QPushButton("Next")
         self.center_button = QPushButton("Center")
         self.scale_up_button = QPushButton("Scale +")
         self.scale_down_button = QPushButton("Scale -")
-        self.left_button = QPushButton("Left")
-        self.right_button = QPushButton("Right")
-        self.up_button = QPushButton("Up")
-        self.down_button = QPushButton("Down")
+        self.left_button = self._make_icon_button(
+            QStyle.StandardPixmap.SP_ArrowLeft,
+            "Move glyph left. Hold Shift with an arrow key for a larger move.",
+        )
+        self.right_button = self._make_icon_button(
+            QStyle.StandardPixmap.SP_ArrowRight,
+            "Move glyph right. Hold Shift with an arrow key for a larger move.",
+        )
+        self.up_button = self._make_icon_button(
+            QStyle.StandardPixmap.SP_ArrowUp,
+            "Move glyph up. Hold Shift with an arrow key for a larger move.",
+        )
+        self.down_button = self._make_icon_button(
+            QStyle.StandardPixmap.SP_ArrowDown,
+            "Move glyph down. Hold Shift with an arrow key for a larger move.",
+        )
         self.preview_button = QPushButton("Refresh preview")
         self.generate_button = QPushButton("Generate Font")
         self.generate_button.setObjectName("ExportButton")
@@ -507,9 +517,6 @@ class MainWindow(QMainWindow):
         self.clear_button.clicked.connect(self.canvas.clear)
         self.undo_button.clicked.connect(self.canvas.undo)
         self.redo_button.clicked.connect(self.canvas.redo)
-        self.save_button.clicked.connect(self._save_current_character)
-        self.previous_button.clicked.connect(self._go_previous)
-        self.next_button.clicked.connect(self._go_next)
         self.center_button.clicked.connect(self.canvas.center_strokes)
         self.scale_up_button.clicked.connect(lambda: self.canvas.scale_strokes(1.08))
         self.scale_down_button.clicked.connect(lambda: self.canvas.scale_strokes(0.92))
@@ -532,21 +539,23 @@ class MainWindow(QMainWindow):
         self._set_button_icon(self.clear_button, QStyle.StandardPixmap.SP_TrashIcon, "Remove all strokes from this glyph.")
         self._set_button_icon(self.undo_button, QStyle.StandardPixmap.SP_ArrowBack, "Undo the last edit.")
         self._set_button_icon(self.redo_button, QStyle.StandardPixmap.SP_ArrowForward, "Redo the last edit.")
-        self._set_button_icon(self.save_button, QStyle.StandardPixmap.SP_DialogSaveButton, "Save this glyph as editable vector strokes.")
 
         refine_layout.addWidget(self.clear_button, 0, 0)
         refine_layout.addWidget(self.undo_button, 0, 1)
         refine_layout.addWidget(self.redo_button, 0, 2)
-        refine_layout.addWidget(self.save_button, 1, 0, 1, 3)
-        refine_layout.addWidget(self.previous_button, 2, 0)
-        refine_layout.addWidget(self.next_button, 2, 1, 1, 2)
-        refine_layout.addWidget(self.center_button, 3, 0)
-        refine_layout.addWidget(self.scale_up_button, 3, 1)
-        refine_layout.addWidget(self.scale_down_button, 3, 2)
-        refine_layout.addWidget(self.left_button, 4, 0)
-        refine_layout.addWidget(self.up_button, 4, 1)
-        refine_layout.addWidget(self.right_button, 4, 2)
-        refine_layout.addWidget(self.down_button, 5, 1)
+        position_label = QLabel("Position")
+        position_label.setObjectName("SectionLabel")
+        transform_label = QLabel("Scale")
+        transform_label.setObjectName("SectionLabel")
+        refine_layout.addWidget(position_label, 1, 0, 1, 3)
+        refine_layout.addWidget(self.left_button, 2, 0)
+        refine_layout.addWidget(self.up_button, 2, 1)
+        refine_layout.addWidget(self.right_button, 2, 2)
+        refine_layout.addWidget(self.down_button, 3, 1)
+        refine_layout.addWidget(transform_label, 4, 0, 1, 3)
+        refine_layout.addWidget(self.scale_down_button, 5, 0)
+        refine_layout.addWidget(self.center_button, 5, 1)
+        refine_layout.addWidget(self.scale_up_button, 5, 2)
 
         preview_box = QGroupBox("Font Preview")
         preview_layout = QVBoxLayout(preview_box)
@@ -638,6 +647,18 @@ class MainWindow(QMainWindow):
     ) -> None:
         button.setIcon(self.style().standardIcon(pixmap))
         button.setToolTip(tooltip)
+
+    def _make_icon_button(
+        self,
+        pixmap: QStyle.StandardPixmap,
+        tooltip: str,
+    ) -> QToolButton:
+        button = QToolButton()
+        button.setObjectName("ToolIconButton")
+        button.setIcon(self.style().standardIcon(pixmap))
+        button.setToolTip(tooltip)
+        button.setFixedSize(44, 32)
+        return button
 
     def _wrap_panel(self, title: str, widget: QWidget) -> QFrame:
         frame = QFrame()

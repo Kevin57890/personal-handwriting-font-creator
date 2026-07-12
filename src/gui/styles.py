@@ -3,7 +3,7 @@ from __future__ import annotations
 
 APP_STYLESHEET = """
 QMainWindow {
-    background: #f3f5f7;
+    background: #f5f7f9;
 }
 
 QWidget {
@@ -12,14 +12,14 @@ QWidget {
 }
 
 QFrame#Header {
-    background: #17212b;
-    border: 1px solid #17212b;
-    border-radius: 8px;
+    background: #1a2733;
+    border: 1px solid #1a2733;
+    border-radius: 10px;
 }
 
 QLabel#AppTitle {
     color: #ffffff;
-    font-size: 23px;
+    font-size: 24px;
     font-weight: 700;
 }
 
@@ -31,7 +31,7 @@ QLabel#AppSubtitle {
 QLabel#StepLabel {
     color: #ffffff;
     background: #15766f;
-    border-radius: 5px;
+    border-radius: 6px;
     padding: 6px 10px;
     font-weight: 700;
 }
@@ -53,9 +53,9 @@ QLabel#ProgressText {
 }
 
 QLabel#GlyphIdentity {
-    background: #e3f2ef;
-    border: 1px solid #b9ddd7;
-    border-radius: 8px;
+    background: #e9f5f2;
+    border: 1px solid #c0e2db;
+    border-radius: 9px;
     color: #0d5d58;
     font-size: 28px;
     font-weight: 700;
@@ -71,7 +71,7 @@ QLabel#GlyphDetail {
 }
 
 QLabel#GlyphStatus {
-    border-radius: 5px;
+    border-radius: 6px;
     font-size: 12px;
     font-weight: 700;
     padding: 5px 8px;
@@ -97,8 +97,8 @@ QGroupBox {
     background: transparent;
     border: 0;
     border-top: 1px solid #e4e9ee;
-    margin-top: 14px;
-    padding: 14px 0 0 0;
+    margin-top: 16px;
+    padding: 15px 0 0 0;
     font-weight: 700;
 }
 
@@ -108,17 +108,26 @@ QGroupBox::title {
     left: 0;
     padding: 0 6px 0 0;
     color: #354353;
+    font-size: 12px;
 }
 
 QFrame#Panel {
     background: #ffffff;
-    border: 1px solid #dbe2e8;
-    border-radius: 8px;
+    border: 1px solid #dce4ea;
+    border-radius: 10px;
 }
 
 QLabel#PanelTitle {
     color: #263342;
     font-weight: 700;
+    font-size: 15px;
+}
+
+QLabel#SectionLabel {
+    color: #7a8795;
+    font-size: 11px;
+    font-weight: 700;
+    padding-top: 4px;
 }
 
 QListWidget {
@@ -128,8 +137,8 @@ QListWidget {
 }
 
 QListWidget::item {
-    border-radius: 5px;
-    padding: 6px 8px;
+    border-radius: 6px;
+    padding: 7px 8px;
     margin: 1px 0;
 }
 
@@ -140,9 +149,9 @@ QListWidget::item:selected {
 
 QLineEdit {
     background: #ffffff;
-    border: 1px solid #cfd7df;
+    border: 1px solid #d5dde4;
     border-radius: 6px;
-    padding: 7px 9px;
+    padding: 8px 10px;
     selection-background-color: #15766f;
 }
 
@@ -152,16 +161,18 @@ QLineEdit:focus {
 
 QPushButton {
     background: #ffffff;
-    border: 1px solid #ccd6df;
+    border: 1px solid #d2dbe3;
     border-radius: 6px;
+    min-height: 18px;
     padding: 7px 10px;
+    font-size: 13px;
     font-weight: 600;
     color: #273444;
 }
 
 QPushButton:hover {
-    background: #f3f7f8;
-    border-color: #9eb0bc;
+    background: #f0f7f6;
+    border-color: #95b8b2;
 }
 
 QPushButton:pressed {
@@ -197,6 +208,22 @@ QPushButton#ExportButton {
     padding: 9px 12px;
 }
 
+QToolButton#ToolIconButton {
+    background: #ffffff;
+    border: 1px solid #d2dbe3;
+    border-radius: 6px;
+    padding: 5px;
+}
+
+QToolButton#ToolIconButton:hover {
+    background: #eef7f5;
+    border-color: #93bcb5;
+}
+
+QToolButton#ToolIconButton:pressed {
+    background: #dcefeb;
+}
+
 QPushButton#ExportButton:hover {
     background: #18232e;
 }
@@ -212,7 +239,7 @@ QTabBar::tab {
     border: 0;
     color: #778291;
     min-width: 62px;
-    padding: 8px 9px;
+    padding: 9px 10px;
     font-weight: 700;
 }
 

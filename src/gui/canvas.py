@@ -249,6 +249,14 @@ class HandwritingCanvas(QWidget):
         painter.setPen(midline_pen)
         painter.drawLine(QPointF(canvas_rect.left(), midline_y), QPointF(canvas_rect.right(), midline_y))
 
+        label_font = painter.font()
+        label_font.setPointSize(max(8, int(canvas_rect.width() / 78)))
+        painter.setFont(label_font)
+        painter.setPen(QColor("#b1791f"))
+        painter.drawText(QPointF(canvas_rect.left() + 12, midline_y - 8), "x-height")
+        painter.setPen(QColor("#177c73"))
+        painter.drawText(QPointF(canvas_rect.left() + 12, baseline_y - 8), "baseline")
+
     def _paint_target_character(self, painter: QPainter) -> None:
         painter.save()
         canvas_rect = self._canvas_rect()
