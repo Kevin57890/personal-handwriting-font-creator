@@ -39,6 +39,7 @@ from PyQt6.QtWidgets import (
 
 from src.data.character_storage import CharacterStorage
 from src.data.project_package import ProjectPackage
+from src.editor.stroke_manager import StrokeManager
 from src.font.font_patcher import BaseFontInfo, FontPatchError, FontPatcher
 from src.font.sample_exporter import FontSampleExporter
 from src.font.ttf_builder import TTFBuilder
@@ -56,6 +57,8 @@ class VectorPreviewWidget(QWidget):
         super().__init__(parent)
         self.storage = storage
         self.preview_text = "Hello World!"
+        self.ink_weight = 76.0
+        self.tracking = 0
         self._stroke_cache: dict[str, list[list[list[float]]]] = {}
         self.setMinimumHeight(170)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -63,6 +66,14 @@ class VectorPreviewWidget(QWidget):
 
     def set_preview_text(self, text: str) -> None:
         self.preview_text = text or " "
+        self.update()
+
+    def set_ink_weight(self, value: int | float) -> None:
+        self.ink_weight = max(24.0, min(float(value), 180.0))
+        self.update()
+
+    def set_tracking(self, value: int | float) -> None:
+        self.tracking = max(-160, min(int(value), 280))
         self.update()
 
     def reload_data(self) -> None:
@@ -143,7 +154,7 @@ class VectorPreviewWidget(QWidget):
 
         pen = QPen(
             QColor("#111827"),
-            max(2.0, 4.0 * scale / 3.0),
+            max(2.0, 4.0 * scale * self.ink_weight / (3.0 * 76.0)),
             Qt.PenStyle.SolidLine,
             Qt.PenCapStyle.RoundCap,
             Qt.PenJoinStyle.RoundJoin,
@@ -164,7 +175,7 @@ class VectorPreviewWidget(QWidget):
             for start, end in zip(mapped_points, mapped_points[1:]):
                 painter.drawLine(start, end)
 
-        return advance
+        return max(4.0, advance + self.tracking * max_height / 1000.0)
 
 
 class CharacterSetupWizard(QWizard):
@@ -518,6 +529,7 @@ class MainWindow(QMainWindow):
         self.backup_project_button = QPushButton("Backup Project")
         self.restore_project_button = QPushButton("Restore Project")
         self.missing_report_button = QPushButton("Missing Report")
+        self.normalize_saved_button = QPushButton("Normalize saved")
         self.import_base_font_button = QPushButton("Import TTF")
         self.clear_base_font_button = QPushButton("Clear base")
         self.select_saved_patch_button = QPushButton("Select saved")
@@ -528,6 +540,18 @@ class MainWindow(QMainWindow):
         self.base_font_detail_label.setObjectName("BaseFontDetail")
         self.base_font_name_label.setWordWrap(True)
         self.base_font_detail_label.setWordWrap(True)
+        self.ink_weight_label = QLabel("76")
+        self.ink_weight_label.setObjectName("SettingsValue")
+        self.ink_weight_slider = QSlider(Qt.Orientation.Horizontal)
+        self.ink_weight_slider.setRange(44, 120)
+        self.ink_weight_slider.setValue(76)
+        self.ink_weight_slider.setToolTip("Controls the exported outline thickness and the live vector preview.")
+        self.tracking_label = QLabel("0")
+        self.tracking_label.setObjectName("SettingsValue")
+        self.tracking_slider = QSlider(Qt.Orientation.Horizontal)
+        self.tracking_slider.setRange(-80, 160)
+        self.tracking_slider.setValue(0)
+        self.tracking_slider.setToolTip("Adds or removes advance width after each handwritten glyph.")
 
         self.clear_button.clicked.connect(self.canvas.clear)
         self.undo_button.clicked.connect(self.canvas.undo)
@@ -550,10 +574,13 @@ class MainWindow(QMainWindow):
         self.backup_project_button.clicked.connect(self._backup_project)
         self.restore_project_button.clicked.connect(self._restore_project)
         self.missing_report_button.clicked.connect(self._write_missing_report)
+        self.normalize_saved_button.clicked.connect(self._normalize_saved_glyphs)
         self.import_base_font_button.clicked.connect(self._import_base_font)
         self.clear_base_font_button.clicked.connect(self._clear_base_font)
         self.select_saved_patch_button.clicked.connect(self._select_saved_patch_characters)
         self.clear_patch_selection_button.clicked.connect(self._clear_patch_selection)
+        self.ink_weight_slider.valueChanged.connect(self._on_ink_weight_changed)
+        self.tracking_slider.valueChanged.connect(self._on_tracking_changed)
 
         self._set_button_icon(self.clear_button, QStyle.StandardPixmap.SP_TrashIcon, "Remove all strokes from this glyph.")
         self._set_button_icon(self.undo_button, QStyle.StandardPixmap.SP_ArrowBack, "Undo the last edit.")
@@ -590,6 +617,7 @@ class MainWindow(QMainWindow):
         project_layout.addWidget(self.backup_project_button, 0, 0)
         project_layout.addWidget(self.restore_project_button, 0, 1)
         project_layout.addWidget(self.missing_report_button, 1, 0, 1, 2)
+        project_layout.addWidget(self.normalize_saved_button, 2, 0, 1, 2)
 
         base_font_box = QGroupBox("Base Font")
         base_font_layout = QGridLayout(base_font_box)
@@ -599,6 +627,15 @@ class MainWindow(QMainWindow):
         base_font_layout.addWidget(self.clear_base_font_button, 2, 1)
         base_font_layout.addWidget(self.select_saved_patch_button, 3, 0)
         base_font_layout.addWidget(self.clear_patch_selection_button, 3, 1)
+
+        typeface_box = QGroupBox("Typeface")
+        typeface_layout = QGridLayout(typeface_box)
+        typeface_layout.addWidget(QLabel("Ink weight"), 0, 0)
+        typeface_layout.addWidget(self.ink_weight_label, 0, 1)
+        typeface_layout.addWidget(self.ink_weight_slider, 1, 0, 1, 2)
+        typeface_layout.addWidget(QLabel("Added spacing"), 2, 0)
+        typeface_layout.addWidget(self.tracking_label, 2, 1)
+        typeface_layout.addWidget(self.tracking_slider, 3, 0, 1, 2)
 
         export_box = QGroupBox("Export")
         export_layout = QGridLayout(export_box)
@@ -637,6 +674,7 @@ class MainWindow(QMainWindow):
         export_tab_layout.setContentsMargins(0, 8, 0, 0)
         export_tab_layout.setSpacing(10)
         export_tab_layout.addWidget(base_font_box)
+        export_tab_layout.addWidget(typeface_box)
         export_tab_layout.addWidget(export_box)
         export_tab_layout.addStretch(1)
 
@@ -934,6 +972,38 @@ class MainWindow(QMainWindow):
         self._refresh_character_list_labels()
         self._update_status()
 
+    def _normalize_saved_glyphs(self) -> None:
+        self._save_current_character()
+        saved_characters = self.storage.saved_characters()
+        if not saved_characters:
+            self.statusBar().showMessage("Save a glyph before normalizing the library.", 3000)
+            return
+
+        answer = QMessageBox.question(
+            self,
+            "Normalize Saved Glyphs",
+            "Fit every saved glyph into the shared writing frame and align it to the baseline?\n\n"
+            "This updates the saved vector strokes. Create a project backup first if you want a restore point.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        left, top, width, height = HandwritingCanvas.guide_target_rect()
+        normalized = 0
+        for character in saved_characters:
+            manager = StrokeManager()
+            manager.load_json_strokes(self.storage.load_strokes(character))
+            if manager.fit_to_rect(left, top, width, height):
+                self.storage.save_character(character, manager.to_json_strokes())
+                normalized += 1
+
+        self._refresh_preview()
+        self._refresh_character_list_labels()
+        self._load_current_character()
+        self.statusBar().showMessage(f"Normalized {normalized} saved glyphs to the writing guides.", 5000)
+
     def _selected_patch_characters(self) -> list[str]:
         if self.base_font_info is None:
             return []
@@ -950,6 +1020,14 @@ class MainWindow(QMainWindow):
 
     def _on_preview_text_changed(self, text: str) -> None:
         self.preview_widget.set_preview_text(text)
+
+    def _on_ink_weight_changed(self, value: int) -> None:
+        self.ink_weight_label.setText(str(value))
+        self.preview_widget.set_ink_weight(value)
+
+    def _on_tracking_changed(self, value: int) -> None:
+        self.tracking_label.setText(f"{value:+d}" if value else "0")
+        self.preview_widget.set_tracking(value)
 
     def _on_eraser_size_changed(self, value: int) -> None:
         self.canvas.set_eraser_radius(value)
@@ -973,7 +1051,12 @@ class MainWindow(QMainWindow):
                 )
                 return
             try:
-                result = FontPatcher(storage=self.storage, family_name=family_name).build(
+                result = FontPatcher(
+                    storage=self.storage,
+                    family_name=family_name,
+                    stroke_width=self.ink_weight_slider.value(),
+                    tracking=self.tracking_slider.value(),
+                ).build(
                     source_path=self.base_font_info.path,
                     output_path=output_path,
                     characters=patched_characters,
@@ -1000,7 +1083,12 @@ class MainWindow(QMainWindow):
                 )
                 if answer != QMessageBox.StandardButton.Yes:
                     return
-            builder = TTFBuilder(storage=self.storage, family_name=family_name)
+            builder = TTFBuilder(
+                storage=self.storage,
+                family_name=family_name,
+                stroke_width=self.ink_weight_slider.value(),
+                tracking=self.tracking_slider.value(),
+            )
             written_path = builder.build(output_path=output_path)
 
         self.last_generated_font = written_path
@@ -1168,7 +1256,7 @@ class MainWindow(QMainWindow):
             self.header_progress.setRange(0, base_total)
             self.header_progress.setValue(selected)
             self.progress_text_label.setText(f"{selected} selected")
-            self.navigator_count_label.setText(f"{selected} patch")
+            self.navigator_count_label.setText(f"{selected} selected")
             self.base_font_name_label.setText(self.base_font_info.family_name)
             self.base_font_name_label.setToolTip(str(self.base_font_info.path))
             self.base_font_detail_label.setText(
@@ -1204,5 +1292,6 @@ class MainWindow(QMainWindow):
         self.glyph_status_label.style().unpolish(self.glyph_status_label)
         self.glyph_status_label.style().polish(self.glyph_status_label)
         self.next_missing_button.setEnabled(saved < total)
+        self.normalize_saved_button.setEnabled(saved > 0)
         self.undo_button.setEnabled(self.canvas.manager.can_undo())
         self.redo_button.setEnabled(self.canvas.manager.can_redo())

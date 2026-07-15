@@ -12,6 +12,9 @@ class HandwritingCanvas(QWidget):
     mode_changed = pyqtSignal(str)
 
     CANVAS_SIZE = 720.0
+    GUIDE_HORIZONTAL_MARGIN_RATIO = 0.16
+    GUIDE_TOP_RATIO = 0.14
+    GUIDE_BASELINE_RATIO = 0.72
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -72,17 +75,27 @@ class HandwritingCanvas(QWidget):
 
     def fit_strokes_to_guides(self) -> None:
         """Fit a glyph inside the writing area while keeping its baseline consistent."""
-        baseline = self.CANVAS_SIZE * 0.72
-        horizontal_margin = self.CANVAS_SIZE * 0.16
-        top = self.CANVAS_SIZE * 0.14
+        horizontal_margin, top, width, height = self.guide_target_rect()
         if self.manager.fit_to_rect(
             horizontal_margin,
             top,
-            self.CANVAS_SIZE - horizontal_margin * 2,
-            baseline - top,
+            width,
+            height,
         ):
             self.stroke_changed.emit()
             self.update()
+
+    @classmethod
+    def guide_target_rect(cls) -> tuple[float, float, float, float]:
+        baseline = cls.CANVAS_SIZE * cls.GUIDE_BASELINE_RATIO
+        horizontal_margin = cls.CANVAS_SIZE * cls.GUIDE_HORIZONTAL_MARGIN_RATIO
+        top = cls.CANVAS_SIZE * cls.GUIDE_TOP_RATIO
+        return (
+            horizontal_margin,
+            top,
+            cls.CANVAS_SIZE - horizontal_margin * 2,
+            baseline - top,
+        )
 
     def scale_strokes(self, factor: float) -> None:
         self.manager.scale_about_center(factor)
@@ -242,7 +255,7 @@ class HandwritingCanvas(QWidget):
 
         baseline_pen = QPen(QColor("#1d9a8a"), 2, Qt.PenStyle.DashLine)
         painter.setPen(baseline_pen)
-        baseline_y = canvas_rect.top() + canvas_rect.height() * 0.72
+        baseline_y = canvas_rect.top() + canvas_rect.height() * self.GUIDE_BASELINE_RATIO
         midline_y = canvas_rect.top() + canvas_rect.height() * 0.43
         painter.drawLine(QPointF(canvas_rect.left(), baseline_y), QPointF(canvas_rect.right(), baseline_y))
         midline_pen = QPen(QColor("#f2b84b"), 1.5, Qt.PenStyle.DashLine)

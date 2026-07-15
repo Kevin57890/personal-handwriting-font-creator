@@ -151,6 +151,17 @@ QLabel#BaseFontDetail {
     font-size: 12px;
 }
 
+QLabel#SettingsValue {
+    background: #e9f5f2;
+    border: 1px solid #c0e2db;
+    border-radius: 5px;
+    color: #0d5d58;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 34px;
+    padding: 3px 6px;
+}
+
 QListWidget {
     background: transparent;
     border: 0;

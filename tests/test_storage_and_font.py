@@ -68,6 +68,49 @@ class StorageAndFontTests(unittest.TestCase):
             self.assertIn("glyf", font)
             self.assertIn("hmtx", font)
 
+    def test_ttf_builder_applies_tracking_to_glyph_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            storage = CharacterStorage(root / "characters")
+            storage.save_character(
+                "A",
+                [[[160, 590, 1.0, 1.0], [300, 140, 1.1, 1.0], [460, 590, 1.2, 1.0]]],
+            )
+
+            normal_path = TTFBuilder(storage, family_name="NormalMetrics", tracking=0).build(
+                root / "NormalMetrics.ttf"
+            )
+            spaced_path = TTFBuilder(storage, family_name="SpacedMetrics", tracking=84).build(
+                root / "SpacedMetrics.ttf"
+            )
+            normal_font = TTFont(normal_path)
+            spaced_font = TTFont(spaced_path)
+            glyph_name = normal_font.getBestCmap()[ord("A")]
+            normal_advance = normal_font["hmtx"].metrics[glyph_name][0]
+            spaced_advance = spaced_font["hmtx"].metrics[glyph_name][0]
+
+            self.assertEqual(spaced_advance - normal_advance, 84)
+
+    def test_ttf_builder_applies_ink_weight_to_outline(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            storage = CharacterStorage(root / "characters")
+            storage.save_character("A", [[[360, 160, 1.0, 1.0], [360, 590, 1.1, 1.0]]])
+
+            light_path = TTFBuilder(storage, family_name="LightInk", stroke_width=44).build(
+                root / "LightInk.ttf"
+            )
+            bold_path = TTFBuilder(storage, family_name="BoldInk", stroke_width=116).build(
+                root / "BoldInk.ttf"
+            )
+            light_font = TTFont(light_path)
+            bold_font = TTFont(bold_path)
+            glyph_name = light_font.getBestCmap()[ord("A")]
+            light_glyph = light_font["glyf"][glyph_name]
+            bold_glyph = bold_font["glyf"][glyph_name]
+
+            self.assertGreater(bold_glyph.xMax - bold_glyph.xMin, light_glyph.xMax - light_glyph.xMin)
+
     def test_font_patcher_replaces_only_selected_base_glyphs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -100,7 +143,25 @@ class StorageAndFontTests(unittest.TestCase):
             before_a_metric = before["hmtx"].metrics[before_cmap[ord("A")]]
             before_b_metric = before["hmtx"].metrics[before_cmap[ord("B")]]
 
-            result = FontPatcher(patch_storage, family_name="PatchedUnit").build(
+            untracked_output = FontPatcher(
+                patch_storage,
+                family_name="PatchedUnit",
+                stroke_width=92,
+                tracking=0,
+            ).build(
+                source_path=base_path,
+                output_path=root / "PatchedNoTracking.ttf",
+                characters=["A"],
+            ).output_path
+            untracked = TTFont(untracked_output)
+            untracked_metric = untracked["hmtx"].metrics[untracked.getBestCmap()[ord("A")]][0]
+
+            result = FontPatcher(
+                patch_storage,
+                family_name="PatchedUnit",
+                stroke_width=92,
+                tracking=32,
+            ).build(
                 source_path=base_path,
                 output_path=root / "PatchedUnit.ttf",
                 characters=["A"],
@@ -112,6 +173,7 @@ class StorageAndFontTests(unittest.TestCase):
             self.assertEqual(patched_cmap[ord("A")], before_cmap[ord("A")])
             self.assertEqual(patched["hmtx"].metrics[patched_cmap[ord("B")]], before_b_metric)
             self.assertNotEqual(patched["hmtx"].metrics[patched_cmap[ord("A")]], before_a_metric)
+            self.assertEqual(patched["hmtx"].metrics[patched_cmap[ord("A")]][0] - untracked_metric, 32)
             self.assertEqual(patched["name"].getDebugName(1), "PatchedUnit")
 
     def test_font_patcher_clones_shared_glyph_before_replacing(self) -> None:

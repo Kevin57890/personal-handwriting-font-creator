@@ -18,11 +18,16 @@ class TTFBuilder:
         storage: CharacterStorage,
         family_name: str = "MyHandwriting",
         units_per_em: int = 1000,
+        stroke_width: float = 76.0,
+        tracking: int = 0,
     ) -> None:
         self.storage = storage
         self.family_name = family_name.strip() or "MyHandwriting"
         self.units_per_em = units_per_em
-        self.generator = GlyphGenerator(units_per_em=units_per_em)
+        self.stroke_width = max(24.0, min(float(stroke_width), 180.0))
+        self.tracking = int(max(-160, min(int(tracking), 280)))
+        self.tracking_in_font_units = int(round(self.tracking * self.units_per_em / 1000.0))
+        self.generator = GlyphGenerator(units_per_em=units_per_em, stroke_width=self.stroke_width)
 
     def build(self, output_path: Path) -> Path:
         output_path = Path(output_path)
@@ -51,7 +56,10 @@ class TTFBuilder:
             strokes = self.storage.load_strokes(character)
             glyph, outline = self.generator.make_glyph(strokes)
             glyphs[glyph_name] = glyph
-            metrics[glyph_name] = (outline.advance_width, outline.left_side_bearing)
+            metrics[glyph_name] = (
+                max(1, outline.advance_width + self.tracking_in_font_units),
+                outline.left_side_bearing,
+            )
 
         builder = FontBuilder(self.units_per_em, isTTF=True)
         builder.setupGlyphOrder(glyph_order)
@@ -118,4 +126,3 @@ class TTFBuilder:
         pen.lineTo((120, 660))
         pen.closePath()
         return pen.glyph()
-

@@ -15,13 +15,15 @@ _Actual screenshot from the current desktop build. In base-font mode, checked gl
 | Editing workspace | Pen, eraser, move, undo, redo, clear, scale, nudge, center, and one-click fit-to-guides. |
 | Live preview | Type a sample phrase and inspect saved vector glyphs before generating a font. |
 | Project tools | Create a portable backup, restore a project, or produce a missing-glyph checklist. |
+| Library normalization | Fit every saved glyph into the shared writing frame and align it to the baseline in one deliberate batch action. |
 | Base-font patching | Import a static TTF, select only the saved glyphs to replace, and retain every other glyph from the original font. |
+| Typeface controls | Tune ink weight and added spacing at export time; the vector preview updates as you adjust them. |
 
 ## Export Without Friction
 
 ![Actual export workflow screenshot](docs/assets/app-export.png)
 
-_Actual screenshot from the current desktop build. The export tab shows the attached base font, selected replacements, font naming, output location, generation, installation, and sample-page actions in one place._
+_Actual screenshot from the current desktop build. The export tab brings base-font selection, ink weight, added spacing, naming, output location, generation, installation, and sample-page actions into one focused workspace._
 
 The export pipeline is fully local:
 
@@ -38,7 +40,8 @@ No scanned images are used to create the font. The application stores vector str
 1. Open the **Export** tab and choose **Import TTF**.
 2. Draw and save the characters you want to change.
 3. In the glyph library, check only the saved glyphs that should replace the imported font.
-4. Choose a new family name and click **Generate Font**.
+4. Optionally set **Ink weight** and **Added spacing** in the Export tab.
+5. Choose a new family name and click **Generate Font**.
 
 The exported font keeps all unselected glyphs, metrics, and tables from the imported font. Static `.ttf` fonts are supported; variable fonts and CFF-based `.otf` fonts should be exported to a static TTF before patching.
 
@@ -97,6 +100,7 @@ Open the sample page in a browser to review your generated font, glyph coverage,
 - **Backup Project** writes a portable `.zip` archive containing saved character JSON and a manifest.
 - **Restore Project** imports a backup and refreshes the editor.
 - **Missing Report** writes a plain-text checklist of saved and missing characters.
+- **Normalize saved** proportionally fits all saved glyphs into the shared guide frame. The app asks for confirmation because it updates the stored vector data.
 - Character files use Unicode-based names, so uppercase and lowercase glyphs remain separate on case-insensitive file systems.
 - Character JSON remains local by default and is ignored by git.
 
@@ -104,6 +108,7 @@ Open the sample page in a browser to review your generated font, glyph coverage,
 
 - The app supports mouse input today and records tablet pressure when the device provides it.
 - `Fit to guides` preserves the character's proportions while placing it consistently in the writing frame.
+- `Ink weight` changes the generated outline thickness, while `Added spacing` changes handwritten glyph advance widths without touching unselected base-font glyphs.
 - `Next missing` keeps a long capture session moving without manually hunting through the alphabet.
 - Fonts may be exported before every character is complete; the editor makes the partial-font decision explicit.
 - In base-font mode, saving a supported glyph automatically selects it for replacement; uncheck it in the glyph library to keep the original version.

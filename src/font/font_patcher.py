@@ -33,9 +33,17 @@ class FontPatchResult:
 
 
 class FontPatcher:
-    def __init__(self, storage: CharacterStorage, family_name: str) -> None:
+    def __init__(
+        self,
+        storage: CharacterStorage,
+        family_name: str,
+        stroke_width: float = 76.0,
+        tracking: int = 0,
+    ) -> None:
         self.storage = storage
         self.family_name = family_name.strip() or "MyHandwriting"
+        self.stroke_width = max(24.0, min(float(stroke_width), 180.0))
+        self.tracking = int(max(-160, min(int(tracking), 280)))
 
     @classmethod
     def inspect(cls, source_path: Path) -> BaseFontInfo:
@@ -95,7 +103,9 @@ class FontPatcher:
                 display = ", ".join(missing_strokes)
                 raise FontPatchError(f"No saved strokes are available for: {display}")
 
-            generator = self._generator_for_units(int(font["head"].unitsPerEm))
+            units_per_em = int(font["head"].unitsPerEm)
+            generator = self._generator_for_units(units_per_em, self.stroke_width)
+            tracking = int(round(self.tracking * units_per_em / 1000.0))
             replaced: list[str] = []
             for character in selected:
                 glyph_name = (font.getBestCmap() or {}).get(ord(character))
@@ -106,7 +116,7 @@ class FontPatcher:
                 target_name = self._target_glyph_name(font, glyph_name, ord(character))
                 font["glyf"][target_name] = glyph
                 font["hmtx"].metrics[target_name] = (
-                    outline.advance_width,
+                    max(1, outline.advance_width + tracking),
                     outline.left_side_bearing,
                 )
                 replaced.append(character)
@@ -135,14 +145,14 @@ class FontPatcher:
             raise FontPatchError("Variable fonts are not supported as a base. Export a static TTF first.")
 
     @staticmethod
-    def _generator_for_units(units_per_em: int) -> GlyphGenerator:
+    def _generator_for_units(units_per_em: int, stroke_width: float) -> GlyphGenerator:
         scale = units_per_em / 1000.0
         return GlyphGenerator(
             units_per_em=units_per_em,
             x_margin=70.0 * scale,
             horizontal_scale=860.0 * scale,
             vertical_scale=950.0 * scale,
-            stroke_width=76.0 * scale,
+            stroke_width=stroke_width * scale,
         )
 
     def _target_glyph_name(self, font: TTFont, source_name: str, codepoint: int) -> str:
